@@ -123,11 +123,6 @@
             });
         }
 
-        // 直接嘗試window.location開啟
-        function openWithLocation(url) {
-            window.location.href = url;
-        }
-
         // 嘗試使用window.open開啟
         function openWithWindowOpen(url) {
             try {
@@ -175,37 +170,46 @@
                 statusText.textContent = `嘗試開啟 Instagram App...`;
                 
                 if (isAutoAttempt) {
-                    // 自動處理時，先用iframe嘗試開啟custom scheme，然後才是location
+                    // 自動處理時，使用更多方法嘗試開啟app
+                    // 1. 先使用動態創建的a標籤觸發
+                    const appLink = document.createElement('a');
+                    appLink.href = customSchemeUrl;
+                    appLink.style.display = 'none';
+                    document.body.appendChild(appLink);
+                    appLink.click();
+                    document.body.removeChild(appLink);
+                    
+                    // 2. 再使用iframe
                     await openWithIframe(customSchemeUrl);
                     
-                    // 短暫延遲檢查是否已開啟app
+                    // 3. 最後才是直接location跳轉
                     setTimeout(() => {
                         if (!appOpened) {
-                            console.log("Instagram app via iframe failed, trying direct location change");
-                            openWithLocation(customSchemeUrl);
+                            console.log("Trying direct location change to custom scheme");
+                            window.location.href = customSchemeUrl;
                             
                             // 再次延遲檢查，如果還是失敗就用https
                             setTimeout(() => {
                                 if (!document.hidden) {
                                     console.log("Instagram app via custom scheme failed, falling back to HTTPS URL.");
                                     statusText.textContent = `App 未自動開啟，嘗試網頁版...`;
-                                    openWithLocation(targetUrl); // Fallback to HTTPS
+                                    window.location.href = targetUrl; // Fallback to HTTPS
                                 }
-                            }, 1000);
+                            }, 1200);
                         }
-                    }, 500);
+                    }, 800);
                 } else {
                     // 手動點擊時直接嘗試open
                     const opened = openWithWindowOpen(customSchemeUrl);
                     if (!opened) {
                         // 如果無法開啟新窗口，則嘗試直接導航
-                        openWithLocation(customSchemeUrl);
+                        window.location.href = customSchemeUrl;
                         
                         // 給一個短暫的延遲來看是否app開啟了
                         setTimeout(() => {
                             if (!document.hidden) {
                                 console.log("Instagram app via custom scheme didn't open, falling back to HTTPS URL.");
-                                openWithWindowOpen(targetUrl) || openWithLocation(targetUrl);
+                                openWithWindowOpen(targetUrl) || (window.location.href = targetUrl);
                             }
                         }, 800);
                     }
@@ -214,22 +218,30 @@
                 statusText.textContent = `嘗試開啟 Threads App...`;
                 
                 if (isAutoAttempt) {
+                    // 對Threads使用類似的多重嘗試方法
+                    const appLink = document.createElement('a');
+                    appLink.href = targetUrl;
+                    appLink.style.display = 'none';
+                    document.body.appendChild(appLink);
+                    appLink.click();
+                    document.body.removeChild(appLink);
+                    
                     await openWithIframe(targetUrl);
                     
                     setTimeout(() => {
                         if (!appOpened) {
-                            openWithLocation(targetUrl);
+                            window.location.href = targetUrl;
                         }
-                    }, 500);
+                    }, 800);
                 } else {
-                    openWithWindowOpen(targetUrl) || openWithLocation(targetUrl);
+                    openWithWindowOpen(targetUrl) || (window.location.href = targetUrl);
                 }
             } else {
                 // 對於其他情況直接使用https
                 if (isAutoAttempt) {
-                    openWithLocation(targetUrl);
+                    window.location.href = targetUrl;
                 } else {
-                    openWithWindowOpen(targetUrl) || openWithLocation(targetUrl);
+                    openWithWindowOpen(targetUrl) || (window.location.href = targetUrl);
                 }
             }
             
@@ -258,6 +270,7 @@
                 return false;
             }
             try {
+                // 在 iOS 和某些瀏覽器中，此處可能需要用戶交互。我們嘗試異步讀取，但不保證成功
                 if (navigator.permissions && typeof navigator.permissions.query === 'function') {
                     try {
                         const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
@@ -271,12 +284,38 @@
                     }
                 }
                 
-                const text = await navigator.clipboard.readText();
-                if (text && (text.startsWith('http://') || text.startsWith('https://') || text.includes('.com') || text.includes('.net'))) {
-                    urlInput.value = text;
-                    performConversionAndOpen(text, true);
-                    pageJustLoaded = false; // 自動處理後，也標記為非剛載入狀態
-                    return true;
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text && (text.startsWith('http://') || text.startsWith('https://') || text.includes('.com') || text.includes('.net'))) {
+                        urlInput.value = text;
+                        performConversionAndOpen(text, true);
+                        pageJustLoaded = false; // 自動處理後，也標記為非剛載入狀態
+                        return true;
+                    } else {
+                        statusText.textContent = '剪貼簿中沒有找到有效網址';
+                    }
+                } catch (clipboardErr) {
+                    console.error("剪貼簿讀取錯誤:", clipboardErr);
+                    // 在iOS上，可能需要用戶交互才能訪問剪貼簿
+                    // 嘗試透過自動模擬點擊來解決此問題
+                    simulateUserInteraction();
+                    
+                    // 設置一個重試計時器
+                    setTimeout(async () => {
+                        try {
+                            const text = await navigator.clipboard.readText();
+                            if (text && (text.startsWith('http://') || text.startsWith('https://') || text.includes('.com') || text.includes('.net'))) {
+                                urlInput.value = text;
+                                performConversionAndOpen(text, true);
+                                pageJustLoaded = false;
+                            } else {
+                                statusText.textContent = '剪貼簿中沒有找到有效網址';
+                            }
+                        } catch (retryErr) {
+                            console.error("重試讀取剪貼簿失敗:", retryErr);
+                            statusText.textContent = '無法讀取剪貼簿。請手動貼上網址。';
+                        }
+                    }, 500);
                 }
                 return false;
             } catch (err) {
@@ -286,21 +325,31 @@
             }
         }
         
+        // 模擬用戶互動來嘗試觸發權限請求
+        function simulateUserInteraction() {
+            // 創建一個臨時按鈕並模擬點擊
+            const tempButton = document.createElement('button');
+            tempButton.style.position = 'absolute';
+            tempButton.style.opacity = '0';
+            tempButton.style.pointerEvents = 'none';
+            document.body.appendChild(tempButton);
+            tempButton.click();
+            document.body.removeChild(tempButton);
+        }
+        
         // 頁面加載事件處理
         window.addEventListener('DOMContentLoaded', () => {
             pageJustLoaded = true; // 頁面載入時標記
             
-            // 為保證在iOS上能正常運作，延遲必須較長
+            // 為保證在iOS上能正常運作，延遲必須較長，但不需要點擊
             setTimeout(() => {
-                // 確保在用戶點擊或互動過頁面後才嘗試自動讀取剪貼簿
-                document.addEventListener('click', function initialClickHandler() {
-                    document.removeEventListener('click', initialClickHandler);
-                    setTimeout(tryReadFromClipboardAndProcess, 300);
-                }, { once: true });
-                
-                // 顯示提示，讓用戶知道需要點擊頁面
-                statusText.textContent = '點擊頁面以讀取剪貼簿並自動開啟';
-            }, 500);
+                // 直接嘗試自動讀取剪貼簿
+                tryReadFromClipboardAndProcess().then(success => {
+                    if (!success) {
+                        statusText.textContent = '等待剪貼簿中的網址...';
+                    }
+                });
+            }, 800);
         });
 
         urlInput.addEventListener('focus', () => {
