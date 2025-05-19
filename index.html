@@ -9,8 +9,8 @@
     <style>
         body {
             background-color: #121212; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-start; /* 改為 flex-start 以便內容從頂部開始 */
-            min-height: 100vh; margin: 0; padding: 30px 20px; box-sizing: border-box; /* 增加上下 padding */
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            min-height: 100vh; margin: 0; padding: 30px 20px; box-sizing: border-box;
         }
         .container {
             background-color: #1e1e1e; padding: 25px; border-radius: 10px;
@@ -34,27 +34,18 @@
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            background-color: #4a4a4a; /* 圖片載入失敗時的背景色 */
+            background-color: #4a4a4a;
             border: 3px solid #666;
-            margin: 0 auto 20px auto; /* 水平置中，下方間距 */
+            margin: 0 auto 20px auto;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            /* --- 修改開始 --- */
-            background-image: url('profile.png'); /* 設定背景圖片 */
-            background-size: cover;             /* 圖片填滿容器，可能會裁切 */
-            background-position: center;        /* 圖片居中顯示 */
-            background-repeat: no-repeat;       /* 不要重複圖片 */
-            /* --- 修改結束 --- */
+            background-image: url('profile.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
-        /* --- 移除之前的 ::before 佔位符 ---
-        #avatarPlaceholder::before {
-            content: "👤";
-            font-size: 50px;
-            color: #2c2c2c;
-        }
-        */
 
         /* 錯誤狀態 UI */
         #errorView {
@@ -64,7 +55,7 @@
         #errorHintDisplay {
             font-size: 20px;
             font-weight: bold;
-            color: #ff6b6b; /* 錯誤提示用紅色 */
+            color: #ff6b6b;
             margin-bottom: 15px;
         }
         #urlInputOnError {
@@ -74,26 +65,27 @@
         }
         #urlInputOnError::placeholder { color: #777; }
 
-        /* 通用按鈕樣式 (主要用於成功狀態的開啟按鈕) */
         .actionButton {
             width: 100%; padding: 15px; background-color: #f2f1ef; color: #121212;
             font-size: 18px; font-weight: bold; border: none; border-radius: 8px;
             cursor: pointer; transition: background-color 0.2s ease, transform 0.1s ease;
-            margin-top: 10px; /* 與上方元素的間距 */
+            margin-top: 10px;
         }
         .actionButton:hover { background-color: #e0e0e0; }
         .actionButton:active { background-color: #cccccc; transform: scale(0.98); }
 
-        /* 狀態/錯誤訊息文字 */
         #statusText {
             margin-top: 20px;
             min-height: 20px;
             font-size: 15px;
             line-height: 1.4;
+            transition: color 0.3s ease; /* 讓顏色轉換更平滑 */
         }
-        .status-success { color: #82c91e; } /* 綠色 */
-        .status-error { color: #ff6b6b; } /* 紅色 */
-        .status-info { color: #74c0fc; } /* 藍色 */
+        .status-success { color: #82c91e; }
+        .status-error { color: #ff6b6b; }
+        .status-info { color: #74c0fc; }
+        .status-processing { color: #fcc419; } /* 黃色/橙色 用於處理中 */
+
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
@@ -105,7 +97,8 @@
     <div class="container">
         <div id="successView">
             <div id="usernameDisplay">@username</div>
-            <div id="avatarPlaceholder"></div> <button id="openInAppButtonSuccess" class="actionButton">在 App 中開啟</button>
+            <div id="avatarPlaceholder"></div>
+            <button id="openInAppButtonSuccess" class="actionButton">在 App 中開啟</button>
         </div>
 
         <div id="errorView">
@@ -130,7 +123,7 @@
         const statusTextEl = document.getElementById('statusText');
 
         let currentConvertedHttpsUrl = null;
-        let currentAppType = ''; // 'instagram' or 'threads'
+        let currentAppType = '';
 
         function getUsernameAndType(url) {
             let username = null;
@@ -151,7 +144,7 @@
         function generateConvertedHttpsUrl(originalUrl) {
             const userInfo = getUsernameAndType(originalUrl.trim());
             if (userInfo && userInfo.username) {
-                currentAppType = userInfo.type; 
+                currentAppType = userInfo.type;
                 if (userInfo.type === 'instagram') {
                     return `https://www.threads.net/@${userInfo.username}`;
                 } else if (userInfo.type === 'threads') {
@@ -164,29 +157,30 @@
 
         function updateStatus(message, type = 'info') {
             statusTextEl.textContent = message;
-            statusTextEl.className = 'status-' + type;
+            statusTextEl.className = 'status-' + type; // 會替換掉所有 class，只留下 status-type
         }
 
         function setupSuccessUI(username, convertedUrl) {
-            usernameDisplayEl.textContent = `@${username}`;
+            usernameDisplayEl.textContent = `@${username}`; // 更新 username
             currentConvertedHttpsUrl = convertedUrl;
             const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
-            openInAppButtonSuccess.textContent = `在 ${targetPlatform} App 中開啟`;
+            openInAppButtonSuccess.textContent = `在 ${targetPlatform} App 中開啟 ${username}`; // 按鈕文字也更新
 
             successView.style.display = 'block';
             errorView.style.display = 'none';
-            updateStatus('網址有效！請點擊按鈕開啟。', 'success');
+            // 強調是新載入的成功狀態
+            updateStatus(`已為 @${username} 準備就緒！請點擊按鈕開啟。`, 'success');
         }
 
-        function setupErrorUI(hint, errorMessage, showInput = true) {
+        function setupErrorUI(hint, errorMessage, showInput = true, originalInputText = "") {
             errorHintDisplayEl.textContent = hint;
             if (showInput) {
                 urlInputOnErrorEl.style.display = 'block';
-                 // urlInputOnErrorEl.value = ''; // 移除這行，以便在剪貼簿內容無效時保留供用戶修改
+                urlInputOnErrorEl.value = originalInputText; // 保留用戶/剪貼簿的無效輸入
             } else {
                 urlInputOnErrorEl.style.display = 'none';
             }
-            openInAppButtonError.style.display = 'none'; 
+            openInAppButtonError.style.display = 'none';
 
             successView.style.display = 'none';
             errorView.style.display = 'block';
@@ -211,13 +205,23 @@
         openInAppButtonSuccess.addEventListener('click', openApp);
         openInAppButtonError.addEventListener('click', openApp);
 
-
         async function autoProcessClipboard() {
+            // 1. 視覺重置並顯示處理中狀態
+            successView.style.display = 'none';
+            errorView.style.display = 'none';
+            openInAppButtonError.style.display = 'none'; // 確保錯誤頁的按鈕也先隱藏
+            usernameDisplayEl.textContent = ''; // 清空上一個用戶名
+            updateStatus('正在讀取剪貼簿並處理...', 'processing'); // 新增 processing 狀態
+
             if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
-                setupErrorUI('剪貼簿功能異常', '您的瀏覽器不支援或未允許讀取剪貼簿。請手動輸入網址。');
+                setupErrorUI('剪貼簿功能異常', '您的瀏覽器不支援或未允許讀取剪貼簿。請手動輸入網址。', true, "");
                 return;
             }
+
             try {
+                // 稍微延遲一下，讓 "處理中" 訊息有機會被使用者看到
+                await new Promise(resolve => setTimeout(resolve, 300));
+
                 const text = await navigator.clipboard.readText();
                 if (text && text.trim() !== '') {
                     const userInfo = getUsernameAndType(text);
@@ -226,21 +230,21 @@
                     if (userInfo && currentConvertedHttpsUrl) {
                         setupSuccessUI(userInfo.username, currentConvertedHttpsUrl);
                     } else {
-                        urlInputOnErrorEl.value = text; 
-                        setupErrorUI('網址格式無效', '剪貼簿中的網址無法識別或不受支援，已填入下方供您修改。');
+                        // 將無效的剪貼簿內容放入輸入框供用戶修改
+                        setupErrorUI('網址格式無效', '剪貼簿中的網址無法識別或不受支援。已填入下方供您修改。', true, text);
                     }
                 } else {
-                    setupErrorUI('剪貼簿為空', '請在下方輸入框中貼上或輸入網址。');
+                    setupErrorUI('剪貼簿為空', '請在下方輸入框中貼上或輸入網址。', true, "");
                 }
             } catch (err) {
                 console.error('讀取剪貼簿失敗:', err);
                 let errorMsg = '讀取剪貼簿時發生未知錯誤。';
                 if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
                     errorMsg = '讀取剪貼簿權限被拒。您可能需要在瀏覽器設定中允許，或與頁面互動後重試。';
-                } else if (err.message.includes('clipboard is not focused')) { // 根據實際錯誤訊息調整
+                } else if (err.message && err.message.includes('clipboard is not focused')) {
                     errorMsg = '請先點擊頁面以啟用剪貼簿讀取功能。';
                 }
-                setupErrorUI('讀取剪貼簿失敗', errorMsg);
+                setupErrorUI('讀取剪貼簿失敗', errorMsg, true, "");
             }
         }
 
@@ -251,11 +255,11 @@
 
             if (userInfo && currentConvertedHttpsUrl) {
                 const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
-                openInAppButtonError.textContent = `在 ${targetPlatform} App 中開啟`;
-                openInAppButtonError.style.display = 'block'; 
-                updateStatus('網址有效！可點擊按鈕開啟。', 'success');
+                openInAppButtonError.textContent = `在 ${targetPlatform} App 中開啟 ${userInfo.username}`;
+                openInAppButtonError.style.display = 'block';
+                updateStatus(`網址有效！可點擊為 @${userInfo.username} 開啟。`, 'success');
             } else {
-                openInAppButtonError.style.display = 'none'; 
+                openInAppButtonError.style.display = 'none';
                 if (url.trim() !== '') {
                     updateStatus('輸入的網址格式無法識別。', 'error');
                 } else {
