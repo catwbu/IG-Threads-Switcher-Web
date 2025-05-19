@@ -9,56 +9,125 @@
     <style>
         body {
             background-color: #121212; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start; /* 改為 flex-start 以便內容從頂部開始 */
+            min-height: 100vh; margin: 0; padding: 30px 20px; box-sizing: border-box; /* 增加上下 padding */
         }
         .container {
             background-color: #1e1e1e; padding: 25px; border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            width: 100%; max-width: 400px; text-align: center;
+            width: 100%; max-width: 380px; text-align: center;
         }
-        h1 { color: #f0f0f0; margin-top: 0; margin-bottom: 20px; font-size: 24px; }
-        #urlInput {
+
+        /* 成功狀態 UI */
+        #successView {
+            display: none; /* 初始隱藏 */
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        #usernameDisplay {
+            font-size: 22px;
+            font-weight: bold;
+            color: #f0f0f0;
+            margin-bottom: 15px;
+            word-break: break-all;
+        }
+        #avatarPlaceholder {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #4a4a4a; /* 佔位背景色 */
+            border: 3px solid #666;
+            margin: 0 auto 20px auto; /* 水平置中，下方間距 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden; /* 以防未來放入圖片 */
+        }
+        /* 可以用 SVG 或文字做更精緻的佔位圖示，此處簡化 */
+        #avatarPlaceholder::before {
+            content: "👤"; /* 簡單的人物圖示佔位 */
+            font-size: 50px;
+            color: #2c2c2c;
+        }
+
+        /* 錯誤狀態 UI */
+        #errorView {
+            display: none; /* 初始隱藏 */
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        #errorHintDisplay {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ff6b6b; /* 錯誤提示用紅色 */
+            margin-bottom: 15px;
+        }
+        #urlInputOnError {
             width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px;
-            border: 1px solid #444; background-color: #2c2c2c; color: #fff;
+            border: 1px solid #555; background-color: #2c2c2c; color: #fff;
             font-size: 16px; box-sizing: border-box;
         }
-        #urlInput::placeholder { color: #888; }
-        #pasteButton { /* 新增貼上按鈕的樣式 */
-            width: 100%; padding: 10px; margin-bottom: 20px; background-color: #3a3a3a;
-            color: #e0e0e0; font-size: 16px; border: 1px solid #555; border-radius: 6px;
-            cursor: pointer;
-        }
-        #goButton {
+        #urlInputOnError::placeholder { color: #777; }
+
+        /* 通用按鈕樣式 (主要用於成功狀態的開啟按鈕) */
+        .actionButton {
             width: 100%; padding: 15px; background-color: #f2f1ef; color: #121212;
-            font-size: 18px; font-weight: bold; border: none; border-radius: 6px;
-            cursor: pointer; transition: background-color 0.2s ease;
+            font-size: 18px; font-weight: bold; border: none; border-radius: 8px;
+            cursor: pointer; transition: background-color 0.2s ease, transform 0.1s ease;
+            margin-top: 10px; /* 與上方元素的間距 */
         }
-        #goButton:hover { background-color: #e0e0e0; }
-        #goButton:active { background-color: #cccccc; }
-        #statusText { margin-top: 15px; color: #82c91e; /* 綠色用於成功提示 */ min-height: 20px; font-size: 14px; }
-        .error-text { color: #ff5252 !important; /* 紅色用於錯誤 */ }
-        .clipboard-info { font-size: 12px; color: #aaa; margin-bottom: 10px; }
+        .actionButton:hover { background-color: #e0e0e0; }
+        .actionButton:active { background-color: #cccccc; transform: scale(0.98); }
+
+        /* 狀態/錯誤訊息文字 */
+        #statusText {
+            margin-top: 20px;
+            min-height: 20px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+        .status-success { color: #82c91e; } /* 綠色 */
+        .status-error { color: #ff6b6b; } /* 紅色 */
+        .status-info { color: #74c0fc; } /* 藍色 */
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>IG/Threads 轉換器</h1>
-        <p class="clipboard-info">複製 IG/Threads 個人網址後，點擊下方貼上</p>
-        <input type="text" id="urlInput" placeholder="IG/Threads 個人網址">
-        <button id="pasteButton">從剪貼簿貼上網址</button>
-        <button id="goButton" style="display: none;">開啟轉換後的頁面</button>
+        <div id="successView">
+            <div id="usernameDisplay">@username</div>
+            <div id="avatarPlaceholder"></div>
+            <button id="openInAppButtonSuccess" class="actionButton">在 App 中開啟</button>
+        </div>
+
+        <div id="errorView">
+            <div id="errorHintDisplay">網址錯誤</div>
+            <input type="text" id="urlInputOnError" placeholder="貼上 IG/Threads 個人網址">
+            <button id="openInAppButtonError" class="actionButton" style="display: none;">在 App 中開啟</button>
+        </div>
+
         <p id="statusText"></p>
     </div>
 
     <script>
-        const urlInput = document.getElementById('urlInput');
-        const pasteButton = document.getElementById('pasteButton');
-        const goButton = document.getElementById('goButton');
-        const statusText = document.getElementById('statusText');
-        let convertedHttpsUrl = null; // 儲存轉換後的 HTTPS URL
+        const successView = document.getElementById('successView');
+        const usernameDisplayEl = document.getElementById('usernameDisplay');
+        const openInAppButtonSuccess = document.getElementById('openInAppButtonSuccess');
+
+        const errorView = document.getElementById('errorView');
+        const errorHintDisplayEl = document.getElementById('errorHintDisplay');
+        const urlInputOnErrorEl = document.getElementById('urlInputOnError');
+        const openInAppButtonError = document.getElementById('openInAppButtonError');
+
+        const statusTextEl = document.getElementById('statusText');
+
+        let currentConvertedHttpsUrl = null;
+        let currentAppType = ''; // 'instagram' or 'threads'
 
         function getUsernameAndType(url) {
+            // (此函數與您之前版本相同，用於解析 username 和 type)
             let username = null;
             if (!url || typeof url !== 'string') return null;
             let igMatch = url.match(/instagram\.com\/([a-zA-Z0-9._]+)(?:\/(?!p\/|reel\/|reels\/|$))?/);
@@ -77,100 +146,129 @@
         function generateConvertedHttpsUrl(originalUrl) {
             const userInfo = getUsernameAndType(originalUrl.trim());
             if (userInfo && userInfo.username) {
+                currentAppType = userInfo.type; // 記錄 App 類型
                 if (userInfo.type === 'instagram') {
-                    return `https://www.threads.net/@${userInfo.username}`; // IG -> Threads
+                    return `https://www.threads.net/@${userInfo.username}`;
                 } else if (userInfo.type === 'threads') {
-                    return `https://www.instagram.com/${userInfo.username}/`; // Threads -> IG
+                    return `https://www.instagram.com/${userInfo.username}/`;
                 }
             }
+            currentAppType = '';
             return null;
         }
 
-        async function handlePaste() {
-            statusText.textContent = ''; // 清除舊訊息
-            statusText.classList.remove('error-text');
-            goButton.style.display = 'none'; // 先隱藏開啟按鈕
-            convertedHttpsUrl = null;
-
-            if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
-                statusText.textContent = '您的瀏覽器不支援讀取剪貼簿。';
-                statusText.classList.add('error-text');
-                return;
-            }
-
-            try {
-                const text = await navigator.clipboard.readText();
-                if (text) {
-                    urlInput.value = text; // 填入輸入框
-                    convertedHttpsUrl = generateConvertedHttpsUrl(text); // 轉換網址
-
-                    if (convertedHttpsUrl) {
-                        const targetPlatform = convertedHttpsUrl.includes('threads.net') ? 'Threads' : 'Instagram';
-                        goButton.textContent = `在 App 中開啟 ${targetPlatform} 個人頁面`;
-                        goButton.style.display = 'block'; // 顯示開啟按鈕
-                        statusText.textContent = '網址已轉換！請點擊上方按鈕開啟。';
-                    } else {
-                        statusText.textContent = '無法識別或不支援此網址格式。';
-                        statusText.classList.add('error-text');
-                    }
-                } else {
-                    statusText.textContent = '剪貼簿是空的。';
-                    statusText.classList.add('error-text');
-                }
-            } catch (err) {
-                console.error('讀取剪貼簿失敗:', err);
-                if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
-                     statusText.textContent = '讀取剪貼簿失敗。瀏覽器可能需要您先與頁面互動 (例如點擊頁面)，或此功能受安全性限制。';
-                } else {
-                     statusText.textContent = '讀取剪貼簿時發生錯誤。';
-                }
-                statusText.classList.add('error-text');
-            }
+        function updateStatus(message, type = 'info') {
+            statusTextEl.textContent = message;
+            statusTextEl.className = 'status-' + type;
         }
 
-        pasteButton.addEventListener('click', handlePaste);
+        function setupSuccessUI(username, convertedUrl) {
+            usernameDisplayEl.textContent = `@${username}`;
+            currentConvertedHttpsUrl = convertedUrl;
+            const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
+            openInAppButtonSuccess.textContent = `在 ${targetPlatform} App 中開啟`;
 
-        goButton.addEventListener('click', () => {
-            if (convertedHttpsUrl) {
-                // 手動點擊時，使用 window.open。
-                // Universal Links (HTTPS) 在使用者直接點擊時，最有機會成功喚起 App。
-                statusText.textContent = `正在嘗試開啟 ${convertedHttpsUrl.includes('threads.net') ? 'Threads' : 'Instagram'} App...`;
-                statusText.classList.remove('error-text');
-                const openedWindow = window.open(convertedHttpsUrl, '_blank');
-                if (!openedWindow || openedWindow.closed || (typeof openedWindow.closed !== 'undefined' && openedWindow.closed) ) {
-                    // 如果彈出視窗被阻止，提示使用者
+            successView.style.display = 'block';
+            errorView.style.display = 'none';
+            updateStatus('網址有效！請點擊按鈕開啟。', 'success');
+        }
+
+        function setupErrorUI(hint, errorMessage, showInput = true) {
+            errorHintDisplayEl.textContent = hint;
+            if (showInput) {
+                urlInputOnErrorEl.style.display = 'block';
+                urlInputOnErrorEl.value = ''; // 清空輸入框
+            } else {
+                urlInputOnErrorEl.style.display = 'none';
+            }
+            openInAppButtonError.style.display = 'none'; // 錯誤時預設隱藏錯誤頁的開啟按鈕
+
+            successView.style.display = 'none';
+            errorView.style.display = 'block';
+            updateStatus(errorMessage, 'error');
+        }
+
+        function openApp() {
+            if (currentConvertedHttpsUrl) {
+                const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
+                updateStatus(`正在嘗試開啟 ${targetPlatform} App...`, 'info');
+                const openedWindow = window.open(currentConvertedHttpsUrl, '_blank');
+                if (!openedWindow || openedWindow.closed || (typeof openedWindow.closed !== 'undefined' && openedWindow.closed)) {
                     setTimeout(() => {
-                         statusText.textContent = '如果 App 未開啟，請檢查瀏覽器的彈出視窗設定，或確認 App 已安裝。';
-                         statusText.classList.add('error-text');
+                        updateStatus('如果 App 未開啟，請檢查瀏覽器的彈出視窗設定或確認 App 已安裝。', 'error');
                     }, 1000);
                 }
             } else {
-                statusText.textContent = '沒有可開啟的有效網址。';
-                statusText.classList.add('error-text');
+                updateStatus('沒有可開啟的有效網址。', 'error');
             }
-        });
+        }
 
-        // 當使用者手動修改輸入框內容時，也嘗試轉換並更新按鈕
-        urlInput.addEventListener('input', () => {
-            const currentInput = urlInput.value;
-            convertedHttpsUrl = generateConvertedHttpsUrl(currentInput);
-            if (convertedHttpsUrl) {
-                const targetPlatform = convertedHttpsUrl.includes('threads.net') ? 'Threads' : 'Instagram';
-                goButton.textContent = `在 App 中開啟 ${targetPlatform} 個人頁面`;
-                goButton.style.display = 'block';
-                statusText.textContent = '網址已就緒，可點擊按鈕開啟。';
-                statusText.classList.remove('error-text');
-            } else {
-                goButton.style.display = 'none';
-                if (currentInput.trim() !== '') { // 只有當輸入框非空且無法轉換時才提示
-                    statusText.textContent = '輸入的網址格式無法識別。';
-                    statusText.classList.add('error-text');
+        openInAppButtonSuccess.addEventListener('click', openApp);
+        openInAppButtonError.addEventListener('click', openApp);
+
+
+        async function autoProcessClipboard() {
+            if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
+                setupErrorUI('剪貼簿功能異常', '您的瀏覽器不支援或未允許讀取剪貼簿。請手動輸入網址。');
+                return;
+            }
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text && text.trim() !== '') {
+                    const userInfo = getUsernameAndType(text);
+                    currentConvertedHttpsUrl = generateConvertedHttpsUrl(text);
+
+                    if (userInfo && currentConvertedHttpsUrl) {
+                        setupSuccessUI(userInfo.username, currentConvertedHttpsUrl);
+                    } else {
+                        urlInputOnErrorEl.value = text; // 將無效的剪貼簿內容放入輸入框供用戶修改
+                        setupErrorUI('網址格式無效', '剪貼簿中的網址無法識別或不受支援，已填入下方供您修改。');
+                    }
                 } else {
-                    statusText.textContent = ''; // 清空提示
+                    setupErrorUI('剪貼簿為空', '請在下方輸入框中貼上或輸入網址。');
+                }
+            } catch (err) {
+                console.error('讀取剪貼簿失敗:', err);
+                let errorMsg = '讀取剪貼簿時發生未知錯誤。';
+                if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
+                    errorMsg = '讀取剪貼簿權限被拒。您可能需要在瀏覽器設定中允許，或與頁面互動後重試。';
+                } else if (err.message.includes('clipboard is not focused')) {
+                    errorMsg = '請先點擊頁面以啟用剪貼簿讀取功能。';
+                }
+                setupErrorUI('讀取剪貼簿失敗', errorMsg);
+            }
+        }
+
+        urlInputOnErrorEl.addEventListener('input', () => {
+            const url = urlInputOnErrorEl.value;
+            const userInfo = getUsernameAndType(url);
+            currentConvertedHttpsUrl = generateConvertedHttpsUrl(url);
+
+            if (userInfo && currentConvertedHttpsUrl) {
+                const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
+                openInAppButtonError.textContent = `在 ${targetPlatform} App 中開啟`;
+                openInAppButtonError.style.display = 'block'; // 輸入有效，顯示錯誤頁的開啟按鈕
+                updateStatus('網址有效！可點擊按鈕開啟。', 'success');
+                 // 可選：如果希望輸入有效後直接跳到成功UI
+                 // setupSuccessUI(userInfo.username, currentConvertedHttpsUrl);
+            } else {
+                openInAppButtonError.style.display = 'none'; // 輸入無效，隱藏按鈕
+                if (url.trim() !== '') {
+                    updateStatus('輸入的網址格式無法識別。', 'error');
+                } else {
+                    updateStatus('請貼上或輸入網址。', 'info');
                 }
             }
         });
 
+        // 頁面載入時自動處理
+        window.addEventListener('load', () => {
+             // 為了提高剪貼簿API在某些瀏覽器（尤其是行動裝置）首次載入時的成功率，
+             // 有時需要使用者先與頁面有一次互動。
+             // 但依照您的需求「一打開就自動獲取」，我們先直接嘗試。
+             // 如果遇到問題，可以考慮引導用戶先點擊一下頁面。
+            autoProcessClipboard();
+        });
     </script>
 </body>
 </html>
