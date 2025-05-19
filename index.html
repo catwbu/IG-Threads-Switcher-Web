@@ -34,20 +34,27 @@
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            background-color: #4a4a4a; /* 佔位背景色 */
+            background-color: #4a4a4a; /* 圖片載入失敗時的背景色 */
             border: 3px solid #666;
             margin: 0 auto 20px auto; /* 水平置中，下方間距 */
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden; /* 以防未來放入圖片 */
+            overflow: hidden;
+            /* --- 修改開始 --- */
+            background-image: url('profile.png'); /* 設定背景圖片 */
+            background-size: cover;             /* 圖片填滿容器，可能會裁切 */
+            background-position: center;        /* 圖片居中顯示 */
+            background-repeat: no-repeat;       /* 不要重複圖片 */
+            /* --- 修改結束 --- */
         }
-        /* 可以用 SVG 或文字做更精緻的佔位圖示，此處簡化 */
+        /* --- 移除之前的 ::before 佔位符 ---
         #avatarPlaceholder::before {
-            content: "👤"; /* 簡單的人物圖示佔位 */
+            content: "👤";
             font-size: 50px;
             color: #2c2c2c;
         }
+        */
 
         /* 錯誤狀態 UI */
         #errorView {
@@ -98,8 +105,7 @@
     <div class="container">
         <div id="successView">
             <div id="usernameDisplay">@username</div>
-            <div id="avatarPlaceholder"></div>
-            <button id="openInAppButtonSuccess" class="actionButton">在 App 中開啟</button>
+            <div id="avatarPlaceholder"></div> <button id="openInAppButtonSuccess" class="actionButton">在 App 中開啟</button>
         </div>
 
         <div id="errorView">
@@ -127,7 +133,6 @@
         let currentAppType = ''; // 'instagram' or 'threads'
 
         function getUsernameAndType(url) {
-            // (此函數與您之前版本相同，用於解析 username 和 type)
             let username = null;
             if (!url || typeof url !== 'string') return null;
             let igMatch = url.match(/instagram\.com\/([a-zA-Z0-9._]+)(?:\/(?!p\/|reel\/|reels\/|$))?/);
@@ -146,7 +151,7 @@
         function generateConvertedHttpsUrl(originalUrl) {
             const userInfo = getUsernameAndType(originalUrl.trim());
             if (userInfo && userInfo.username) {
-                currentAppType = userInfo.type; // 記錄 App 類型
+                currentAppType = userInfo.type; 
                 if (userInfo.type === 'instagram') {
                     return `https://www.threads.net/@${userInfo.username}`;
                 } else if (userInfo.type === 'threads') {
@@ -177,11 +182,11 @@
             errorHintDisplayEl.textContent = hint;
             if (showInput) {
                 urlInputOnErrorEl.style.display = 'block';
-                urlInputOnErrorEl.value = ''; // 清空輸入框
+                 // urlInputOnErrorEl.value = ''; // 移除這行，以便在剪貼簿內容無效時保留供用戶修改
             } else {
                 urlInputOnErrorEl.style.display = 'none';
             }
-            openInAppButtonError.style.display = 'none'; // 錯誤時預設隱藏錯誤頁的開啟按鈕
+            openInAppButtonError.style.display = 'none'; 
 
             successView.style.display = 'none';
             errorView.style.display = 'block';
@@ -221,7 +226,7 @@
                     if (userInfo && currentConvertedHttpsUrl) {
                         setupSuccessUI(userInfo.username, currentConvertedHttpsUrl);
                     } else {
-                        urlInputOnErrorEl.value = text; // 將無效的剪貼簿內容放入輸入框供用戶修改
+                        urlInputOnErrorEl.value = text; 
                         setupErrorUI('網址格式無效', '剪貼簿中的網址無法識別或不受支援，已填入下方供您修改。');
                     }
                 } else {
@@ -232,7 +237,7 @@
                 let errorMsg = '讀取剪貼簿時發生未知錯誤。';
                 if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
                     errorMsg = '讀取剪貼簿權限被拒。您可能需要在瀏覽器設定中允許，或與頁面互動後重試。';
-                } else if (err.message.includes('clipboard is not focused')) {
+                } else if (err.message.includes('clipboard is not focused')) { // 根據實際錯誤訊息調整
                     errorMsg = '請先點擊頁面以啟用剪貼簿讀取功能。';
                 }
                 setupErrorUI('讀取剪貼簿失敗', errorMsg);
@@ -247,12 +252,10 @@
             if (userInfo && currentConvertedHttpsUrl) {
                 const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
                 openInAppButtonError.textContent = `在 ${targetPlatform} App 中開啟`;
-                openInAppButtonError.style.display = 'block'; // 輸入有效，顯示錯誤頁的開啟按鈕
+                openInAppButtonError.style.display = 'block'; 
                 updateStatus('網址有效！可點擊按鈕開啟。', 'success');
-                 // 可選：如果希望輸入有效後直接跳到成功UI
-                 // setupSuccessUI(userInfo.username, currentConvertedHttpsUrl);
             } else {
-                openInAppButtonError.style.display = 'none'; // 輸入無效，隱藏按鈕
+                openInAppButtonError.style.display = 'none'; 
                 if (url.trim() !== '') {
                     updateStatus('輸入的網址格式無法識別。', 'error');
                 } else {
@@ -260,13 +263,8 @@
                 }
             }
         });
-
-        // 頁面載入時自動處理
+        
         window.addEventListener('load', () => {
-             // 為了提高剪貼簿API在某些瀏覽器（尤其是行動裝置）首次載入時的成功率，
-             // 有時需要使用者先與頁面有一次互動。
-             // 但依照您的需求「一打開就自動獲取」，我們先直接嘗試。
-             // 如果遇到問題，可以考慮引導用戶先點擊一下頁面。
             autoProcessClipboard();
         });
     </script>
