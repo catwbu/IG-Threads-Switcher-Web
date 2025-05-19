@@ -4,39 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IG/Threads 網址轉換器</title>
-
     <link rel="icon" href="icon2.png" type="image/png">
     <link rel="apple-touch-icon" href="icon2.png">
     <style>
         body {
-            background-color: #121212;
-            color: #e0e0e0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
+            background-color: #121212; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
         }
         .container {
-            background-color: #1e1e1e;
-            padding: 25px;
-            border-radius: 10px;
+            background-color: #1e1e1e; padding: 25px; border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
+            width: 100%; max-width: 400px; text-align: center;
         }
         h1 { color: #f0f0f0; margin-top: 0; margin-bottom: 20px; font-size: 24px; }
         #urlInput {
-            width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px;
+            width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px;
             border: 1px solid #444; background-color: #2c2c2c; color: #fff;
             font-size: 16px; box-sizing: border-box;
         }
         #urlInput::placeholder { color: #888; }
+        #pasteButton { /* 新增貼上按鈕的樣式 */
+            width: 100%; padding: 10px; margin-bottom: 20px; background-color: #3a3a3a;
+            color: #e0e0e0; font-size: 16px; border: 1px solid #555; border-radius: 6px;
+            cursor: pointer;
+        }
         #goButton {
             width: 100%; padding: 15px; background-color: #f2f1ef; color: #121212;
             font-size: 18px; font-weight: bold; border: none; border-radius: 6px;
@@ -44,320 +36,141 @@
         }
         #goButton:hover { background-color: #e0e0e0; }
         #goButton:active { background-color: #cccccc; }
-        #statusText { margin-top: 15px; color: #ff5252; min-height: 20px; font-size: 14px; }
-        .clipboard-info { font-size: 12px; color: #aaa; margin-bottom: 15px; }
-        /* 新增隱藏iframe用於處理自動開啟 */
-        #appFrame {
-            display: none;
-            width: 1px;
-            height: 1px;
-            position: absolute;
-            top: -100px;
-        }
+        #statusText { margin-top: 15px; color: #82c91e; /* 綠色用於成功提示 */ min-height: 20px; font-size: 14px; }
+        .error-text { color: #ff5252 !important; /* 紅色用於錯誤 */ }
+        .clipboard-info { font-size: 12px; color: #aaa; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>IG/Threads 轉換器</h1>
-        <p class="clipboard-info">將嘗試自動讀取剪貼簿中的網址並開啟 App</p>
-        <input type="text" id="urlInput" placeholder="貼上或等待自動填入網址">
-        <button id="goButton">轉換並開啟</button>
+        <p class="clipboard-info">複製 IG/Threads 個人網址後，點擊下方貼上</p>
+        <input type="text" id="urlInput" placeholder="IG/Threads 個人網址">
+        <button id="pasteButton">從剪貼簿貼上網址</button>
+        <button id="goButton" style="display: none;">開啟轉換後的頁面</button>
         <p id="statusText"></p>
     </div>
-    <!-- 新增用於自動開啟的隱藏iframe -->
-    <iframe id="appFrame"></iframe>
 
     <script>
         const urlInput = document.getElementById('urlInput');
+        const pasteButton = document.getElementById('pasteButton');
         const goButton = document.getElementById('goButton');
         const statusText = document.getElementById('statusText');
-        const appFrame = document.getElementById('appFrame');
-        let pageJustLoaded = true; // 標記頁面剛載入
+        let convertedHttpsUrl = null; // 儲存轉換後的 HTTPS URL
 
-        function getUsernameAndType(url) { // 返回包含 type 的 userInfo
+        function getUsernameAndType(url) {
             let username = null;
             if (!url || typeof url !== 'string') return null;
             let igMatch = url.match(/instagram\.com\/([a-zA-Z0-9._]+)(?:\/(?!p\/|reel\/|reels\/|$))?/);
             if (igMatch && igMatch[1]) {
                 if (!['p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct'].includes(igMatch[1])) {
-                    username = igMatch[1];
-                    return { type: 'instagram', username: username };
+                    return { type: 'instagram', username: igMatch[1] };
                 }
             }
             let threadsMatch = url.match(/threads\.(?:net|com)\/@([a-zA-Z0-9._]+)(?:\/|$)/);
             if (threadsMatch && threadsMatch[1]) {
-                username = threadsMatch[1];
-                return { type: 'threads', username: username };
+                return { type: 'threads', username: threadsMatch[1] };
             }
             return null;
         }
 
-        function generateUrls(originalUrl) {
+        function generateConvertedHttpsUrl(originalUrl) {
             const userInfo = getUsernameAndType(originalUrl.trim());
-            let urls = {
-                customScheme: null,
-                https: null,
-                targetApp: null // 'instagram' or 'threads'
-            };
-
             if (userInfo && userInfo.username) {
-                urls.targetApp = userInfo.type;
                 if (userInfo.type === 'instagram') {
-                    urls.customScheme = `instagram://user?username=${userInfo.username}`;
-                    urls.https = `https://www.instagram.com/${userInfo.username}/`; // 轉換到 IG
+                    return `https://www.threads.net/@${userInfo.username}`; // IG -> Threads
                 } else if (userInfo.type === 'threads') {
-                    // Threads 的 username-based custom scheme 不明確，優先使用 HTTPS Universal Link
-                    // 這裡我們將 customScheme 設為 null 或與 https 相同，因為主要依賴 universal link
-                    urls.customScheme = null; // 或者可以嘗試 `threads://profile/${userInfo.username}` 但不保證有效
-                    urls.https = `https://www.threads.net/@${userInfo.username}/`; // 轉換到 Threads
+                    return `https://www.instagram.com/${userInfo.username}/`; // Threads -> IG
                 }
             }
-            return urls;
+            return null;
         }
 
-        // 嘗試使用iframe開啟custom scheme
-        function openWithIframe(url) {
-            appFrame.src = url;
-            return new Promise((resolve) => {
-                setTimeout(() => resolve(), 300); // 短暫等待iframe嘗試開啟app
-            });
-        }
-
-        // 嘗試使用window.open開啟
-        function openWithWindowOpen(url) {
-            try {
-                const newWindow = window.open(url, '_blank');
-                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                    return false; // 彈出視窗被阻擋
-                }
-                return true;
-            } catch (e) {
-                console.error("Error opening window:", e);
-                return false;
-            }
-        }
-
-        async function performConversionAndOpen(originalUrl, isAutoAttempt = false) {
-            const urls = generateUrls(originalUrl);
-            const targetUrl = urls.https; // 預設使用轉換後的 HTTPS URL
-            const customSchemeUrl = urls.customScheme;
-            const targetApp = urls.targetApp;
-
-            const shortHttpsUrl = targetUrl ? (targetUrl.length > 50 ? targetUrl.substring(0, 47) + '...' : targetUrl) : "";
-
-            if (!targetUrl) {
-                const shortOriginalUrl = originalUrl.length > 30 ? originalUrl.substring(0, 27) + '...' : originalUrl;
-                statusText.textContent = `網址 "${shortOriginalUrl}" 無法轉換。請檢查網址。`;
-                return;
-            }
-
-            statusText.textContent = `轉換成功！正在${isAutoAttempt ? "嘗試自動開啟" : "開啟"} ${targetApp}...`;
-
-            // 設置頁面可見性變化監聽
-            let appOpened = false;
-            const visibilityChangeHandler = () => {
-                if (document.hidden || (document.visibilityState && document.visibilityState === 'hidden')) {
-                    appOpened = true; // 頁面不可見了，可能 App 已開啟
-                    console.log("Page became hidden, assuming app opened.");
-                    document.removeEventListener("visibilitychange", visibilityChangeHandler);
-                    document.removeEventListener("webkitvisibilitychange", visibilityChangeHandler);
-                }
-            };
-            document.addEventListener("visibilitychange", visibilityChangeHandler);
-            document.addEventListener("webkitvisibilitychange", visibilityChangeHandler); // Safari
-
-            if (targetApp === 'instagram' && customSchemeUrl) {
-                statusText.textContent = `嘗試開啟 Instagram App...`;
-                
-                if (isAutoAttempt) {
-                    // 自動處理時，使用更多方法嘗試開啟app
-                    // 1. 先使用動態創建的a標籤觸發
-                    const appLink = document.createElement('a');
-                    appLink.href = customSchemeUrl;
-                    appLink.style.display = 'none';
-                    document.body.appendChild(appLink);
-                    appLink.click();
-                    document.body.removeChild(appLink);
-                    
-                    // 2. 再使用iframe
-                    await openWithIframe(customSchemeUrl);
-                    
-                    // 3. 最後才是直接location跳轉
-                    setTimeout(() => {
-                        if (!appOpened) {
-                            console.log("Trying direct location change to custom scheme");
-                            window.location.href = customSchemeUrl;
-                            
-                            // 再次延遲檢查，如果還是失敗就用https
-                            setTimeout(() => {
-                                if (!document.hidden) {
-                                    console.log("Instagram app via custom scheme failed, falling back to HTTPS URL.");
-                                    statusText.textContent = `App 未自動開啟，嘗試網頁版...`;
-                                    window.location.href = targetUrl; // Fallback to HTTPS
-                                }
-                            }, 1200);
-                        }
-                    }, 800);
-                } else {
-                    // 手動點擊時直接嘗試open
-                    const opened = openWithWindowOpen(customSchemeUrl);
-                    if (!opened) {
-                        // 如果無法開啟新窗口，則嘗試直接導航
-                        window.location.href = customSchemeUrl;
-                        
-                        // 給一個短暫的延遲來看是否app開啟了
-                        setTimeout(() => {
-                            if (!document.hidden) {
-                                console.log("Instagram app via custom scheme didn't open, falling back to HTTPS URL.");
-                                openWithWindowOpen(targetUrl) || (window.location.href = targetUrl);
-                            }
-                        }, 800);
-                    }
-                }
-            } else if (targetApp === 'threads') {
-                statusText.textContent = `嘗試開啟 Threads App...`;
-                
-                if (isAutoAttempt) {
-                    // 對Threads使用類似的多重嘗試方法
-                    const appLink = document.createElement('a');
-                    appLink.href = targetUrl;
-                    appLink.style.display = 'none';
-                    document.body.appendChild(appLink);
-                    appLink.click();
-                    document.body.removeChild(appLink);
-                    
-                    await openWithIframe(targetUrl);
-                    
-                    setTimeout(() => {
-                        if (!appOpened) {
-                            window.location.href = targetUrl;
-                        }
-                    }, 800);
-                } else {
-                    openWithWindowOpen(targetUrl) || (window.location.href = targetUrl);
-                }
-            } else {
-                // 對於其他情況直接使用https
-                if (isAutoAttempt) {
-                    window.location.href = targetUrl;
-                } else {
-                    openWithWindowOpen(targetUrl) || (window.location.href = targetUrl);
-                }
-            }
-            
-            // 清理事件監聽器
-            setTimeout(() => {
-                document.removeEventListener("visibilitychange", visibilityChangeHandler);
-                document.removeEventListener("webkitvisibilitychange", visibilityChangeHandler);
-            }, 3000);
-        }
-
-        goButton.addEventListener('click', () => {
-            pageJustLoaded = false; // 用戶已互動
-            const originalUrl = urlInput.value;
-            if (!originalUrl) {
-                statusText.textContent = '請輸入或貼上網址。';
-                return;
-            }
-            performConversionAndOpen(originalUrl, false);
-        });
-
-        async function tryReadFromClipboardAndProcess() {
-            if (!pageJustLoaded) return false; // 如果用戶已經互動過，不再自動處理
+        async function handlePaste() {
+            statusText.textContent = ''; // 清除舊訊息
+            statusText.classList.remove('error-text');
+            goButton.style.display = 'none'; // 先隱藏開啟按鈕
+            convertedHttpsUrl = null;
 
             if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
-                statusText.textContent = '此瀏覽器不支援自動讀取剪貼簿';
-                return false;
+                statusText.textContent = '您的瀏覽器不支援讀取剪貼簿。';
+                statusText.classList.add('error-text');
+                return;
             }
+
             try {
-                // 在 iOS 和某些瀏覽器中，此處可能需要用戶交互。我們嘗試異步讀取，但不保證成功
-                if (navigator.permissions && typeof navigator.permissions.query === 'function') {
-                    try {
-                        const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
-                        if (permissionStatus.state === 'denied') {
-                            statusText.textContent = '讀取剪貼簿權限被拒。';
-                            return false;
-                        }
-                    } catch (permError) {
-                        console.log("Clipboard permission check failed:", permError);
-                        // 繼續嘗試讀取，即使權限檢查失敗
-                    }
-                }
-                
-                try {
-                    const text = await navigator.clipboard.readText();
-                    if (text && (text.startsWith('http://') || text.startsWith('https://') || text.includes('.com') || text.includes('.net'))) {
-                        urlInput.value = text;
-                        performConversionAndOpen(text, true);
-                        pageJustLoaded = false; // 自動處理後，也標記為非剛載入狀態
-                        return true;
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    urlInput.value = text; // 填入輸入框
+                    convertedHttpsUrl = generateConvertedHttpsUrl(text); // 轉換網址
+
+                    if (convertedHttpsUrl) {
+                        const targetPlatform = convertedHttpsUrl.includes('threads.net') ? 'Threads' : 'Instagram';
+                        goButton.textContent = `在 App 中開啟 ${targetPlatform} 個人頁面`;
+                        goButton.style.display = 'block'; // 顯示開啟按鈕
+                        statusText.textContent = '網址已轉換！請點擊上方按鈕開啟。';
                     } else {
-                        statusText.textContent = '剪貼簿中沒有找到有效網址';
+                        statusText.textContent = '無法識別或不支援此網址格式。';
+                        statusText.classList.add('error-text');
                     }
-                } catch (clipboardErr) {
-                    console.error("剪貼簿讀取錯誤:", clipboardErr);
-                    // 在iOS上，可能需要用戶交互才能訪問剪貼簿
-                    // 嘗試透過自動模擬點擊來解決此問題
-                    simulateUserInteraction();
-                    
-                    // 設置一個重試計時器
-                    setTimeout(async () => {
-                        try {
-                            const text = await navigator.clipboard.readText();
-                            if (text && (text.startsWith('http://') || text.startsWith('https://') || text.includes('.com') || text.includes('.net'))) {
-                                urlInput.value = text;
-                                performConversionAndOpen(text, true);
-                                pageJustLoaded = false;
-                            } else {
-                                statusText.textContent = '剪貼簿中沒有找到有效網址';
-                            }
-                        } catch (retryErr) {
-                            console.error("重試讀取剪貼簿失敗:", retryErr);
-                            statusText.textContent = '無法讀取剪貼簿。請手動貼上網址。';
-                        }
-                    }, 500);
+                } else {
+                    statusText.textContent = '剪貼簿是空的。';
+                    statusText.classList.add('error-text');
                 }
-                return false;
             } catch (err) {
                 console.error('讀取剪貼簿失敗:', err);
-                statusText.textContent = '讀取剪貼簿失敗。請手動貼上網址。';
-                return false;
+                if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
+                     statusText.textContent = '讀取剪貼簿失敗。瀏覽器可能需要您先與頁面互動 (例如點擊頁面)，或此功能受安全性限制。';
+                } else {
+                     statusText.textContent = '讀取剪貼簿時發生錯誤。';
+                }
+                statusText.classList.add('error-text');
             }
         }
-        
-        // 模擬用戶互動來嘗試觸發權限請求
-        function simulateUserInteraction() {
-            // 創建一個臨時按鈕並模擬點擊
-            const tempButton = document.createElement('button');
-            tempButton.style.position = 'absolute';
-            tempButton.style.opacity = '0';
-            tempButton.style.pointerEvents = 'none';
-            document.body.appendChild(tempButton);
-            tempButton.click();
-            document.body.removeChild(tempButton);
-        }
-        
-        // 頁面加載事件處理
-        window.addEventListener('DOMContentLoaded', () => {
-            pageJustLoaded = true; // 頁面載入時標記
-            
-            // 為保證在iOS上能正常運作，延遲必須較長，但不需要點擊
-            setTimeout(() => {
-                // 直接嘗試自動讀取剪貼簿
-                tryReadFromClipboardAndProcess().then(success => {
-                    if (!success) {
-                        statusText.textContent = '等待剪貼簿中的網址...';
-                    }
-                });
-            }, 800);
+
+        pasteButton.addEventListener('click', handlePaste);
+
+        goButton.addEventListener('click', () => {
+            if (convertedHttpsUrl) {
+                // 手動點擊時，使用 window.open。
+                // Universal Links (HTTPS) 在使用者直接點擊時，最有機會成功喚起 App。
+                statusText.textContent = `正在嘗試開啟 ${convertedHttpsUrl.includes('threads.net') ? 'Threads' : 'Instagram'} App...`;
+                statusText.classList.remove('error-text');
+                const openedWindow = window.open(convertedHttpsUrl, '_blank');
+                if (!openedWindow || openedWindow.closed || (typeof openedWindow.closed !== 'undefined' && openedWindow.closed) ) {
+                    // 如果彈出視窗被阻止，提示使用者
+                    setTimeout(() => {
+                         statusText.textContent = '如果 App 未開啟，請檢查瀏覽器的彈出視窗設定，或確認 App 已安裝。';
+                         statusText.classList.add('error-text');
+                    }, 1000);
+                }
+            } else {
+                statusText.textContent = '沒有可開啟的有效網址。';
+                statusText.classList.add('error-text');
+            }
         });
 
-        urlInput.addEventListener('focus', () => {
-            pageJustLoaded = false; // 用戶聚焦輸入框，視為互動
-        });
+        // 當使用者手動修改輸入框內容時，也嘗試轉換並更新按鈕
         urlInput.addEventListener('input', () => {
-            pageJustLoaded = false; // 用戶輸入，視為互動
+            const currentInput = urlInput.value;
+            convertedHttpsUrl = generateConvertedHttpsUrl(currentInput);
+            if (convertedHttpsUrl) {
+                const targetPlatform = convertedHttpsUrl.includes('threads.net') ? 'Threads' : 'Instagram';
+                goButton.textContent = `在 App 中開啟 ${targetPlatform} 個人頁面`;
+                goButton.style.display = 'block';
+                statusText.textContent = '網址已就緒，可點擊按鈕開啟。';
+                statusText.classList.remove('error-text');
+            } else {
+                goButton.style.display = 'none';
+                if (currentInput.trim() !== '') { // 只有當輸入框非空且無法轉換時才提示
+                    statusText.textContent = '輸入的網址格式無法識別。';
+                    statusText.classList.add('error-text');
+                } else {
+                    statusText.textContent = ''; // 清空提示
+                }
+            }
         });
+
     </script>
 </body>
 </html>
