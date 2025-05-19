@@ -99,7 +99,7 @@
     </div>
 
     <script>
-        const urlInput = document.getElementById('urlInput');
+                const urlInput = document.getElementById('urlInput');
         const goButton = document.getElementById('goButton');
         const statusText = document.getElementById('statusText');
 
@@ -135,22 +135,46 @@
             return newUrl;
         }
 
-        function performConversionAndOpen(urlToConvert) {
+        // 修改此函數，增加 isAutoAttempt 參數
+        function performConversionAndOpen(urlToConvert, isAutoAttempt = false) {
             const newUrl = convertUrl(urlToConvert);
+            const shortNewUrl = newUrl ? (newUrl.length > 50 ? newUrl.substring(0, 47) + '...' : newUrl) : "";
+
             if (newUrl) {
-                statusText.textContent = `轉換成功！正在開啟: ${newUrl.length > 50 ? newUrl.substring(0, 47) + '...' : newUrl}`;
-                try {
-                    const openedWindow = window.open(newUrl, '_blank');
-                    if (!openedWindow || openedWindow.closed || typeof openedWindow.closed === 'undefined') {
-                        // This condition checks if the window.open was blocked or failed
-                        statusText.textContent = '無法自動開啟新分頁。請檢查彈出視窗封鎖設定，或手動點擊按鈕。';
+                statusText.textContent = `轉換成功！正在${isAutoAttempt ? "嘗試自動開啟" : "開啟"}: ${shortNewUrl}`;
+
+                if (isAutoAttempt) {
+                    // 自動嘗試時，使用 window.location.href 導航當前頁面
+                    // 這有助於作業系統攔截 Universal Links/App Links 並啟動 App
+                    window.location.href = newUrl;
+
+                    // 由於頁面可能會立即導航離開或被 App 取代，
+                    // 很難直接檢測 App 是否成功開啟。
+                    // 可以設置一個短暫的延遲來更新狀態，以防萬一頁面還在（例如 App 未安裝或未成功跳轉）。
+                    setTimeout(() => {
+                        // 這個檢查並不完美，但如果用戶在1.5秒後仍在當前頁面，
+                        // 並且瀏覽器沒有隱藏（document.hidden），可能意味著 App 未開啟。
+                        if (typeof document.hidden === "undefined" || !document.hidden) {
+                           // 可以在此處添加額外的提示，例如："如果 App 未自動開啟，請確保已安裝最新版本。"
+                           // 但為了簡潔，目前不添加額外提示。
+                        }
+                    }, 1500);
+
+                } else {
+                    // 手動點擊時，使用 window.open 在新分頁開啟
+                    try {
+                        const openedWindow = window.open(newUrl, '_blank');
+                        if (!openedWindow || openedWindow.closed || typeof openedWindow.closed === 'undefined') {
+                            statusText.textContent = '無法開啟新分頁。請檢查彈出視窗封鎖設定。';
+                        }
+                    } catch (e) {
+                        console.error("Error opening window: ", e);
+                        statusText.textContent = '開啟新分頁時發生錯誤。';
                     }
-                } catch (e) {
-                    console.error("Error opening window: ", e);
-                    statusText.textContent = '開啟新分頁時發生錯誤。請手動點擊按鈕。';
                 }
             } else {
-                statusText.textContent = '剪貼簿網址無法轉換。請檢查網址或手動點擊按鈕。';
+                const shortOriginalUrl = urlToConvert.length > 30 ? urlToConvert.substring(0, 27) + '...' : urlToConvert;
+                statusText.textContent = `網址 "${shortOriginalUrl}" 無法轉換。請檢查網址。`;
             }
         }
 
@@ -160,15 +184,13 @@
                 statusText.textContent = '請輸入或貼上網址。';
                 return;
             }
-            performConversionAndOpen(originalUrl);
+            performConversionAndOpen(originalUrl, false); // 手動點擊，isAutoAttempt = false
         });
 
         async function tryReadFromClipboardAndProcess() {
             if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
-                // statusText.textContent = '您的瀏覽器不支援自動讀取剪貼簿。'; // 可以選擇不顯示此訊息，避免過多提示
-                return false; // 表示無法讀取
+                return false;
             }
-
             try {
                 if (navigator.permissions && typeof navigator.permissions.query === 'function') {
                     const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
@@ -177,42 +199,45 @@
                         return false;
                     }
                 }
-                
                 const text = await navigator.clipboard.readText();
                 if (text && (text.startsWith('http://') || text.startsWith('https://') || text.includes('.com') || text.includes('.net'))) {
                     urlInput.value = text;
                     statusText.textContent = '已從剪貼簿讀取網址，正在嘗試自動轉換...';
-                    performConversionAndOpen(text); // <--- 自動轉換和開啟
-                    return true; // 表示已處理
+                    performConversionAndOpen(text, true); // 自動處理，isAutoAttempt = true
+                    return true;
                 } else if (text) {
-                    // statusText.textContent = '剪貼簿內容非有效網址。'; // 如果只是普通文字，不清空輸入框
                     return false;
                 } else {
-                    return false; // 剪貼簿為空
+                    return false;
                 }
             } catch (err) {
                 console.error('讀取剪貼簿失敗:', err);
-                // statusText.textContent = '讀取剪貼簿時發生錯誤。'; // 避免過多錯誤提示干擾
                 return false;
             }
         }
 
-        // 頁面載入時和輸入框獲得焦點時，都嘗試讀取並處理
-        // 我們只希望自動開啟邏輯執行一次，避免重複開啟
         let autoProcessAttempted = false;
-
         async function initialAutoProcess() {
             if (autoProcessAttempted) return;
-            autoProcessAttempted = true; // 標記已嘗試
+            autoProcessAttempted = true;
             await tryReadFromClipboardAndProcess();
         }
         
         window.addEventListener('load', initialAutoProcess);
-        // 當使用者點擊輸入框時，如果之前自動處理失敗或剪貼簿內容已更新，可以再次嘗試，但不強制自動開啟
         urlInput.addEventListener('focus', async () => {
-            // 如果輸入框是空的，可以再次嘗試填充，但不自動開啟
-            if (!urlInput.value) {
-                await tryReadFromClipboardAndProcess(); // 這會再次嘗試填充和開啟
+            if (!urlInput.value && !autoProcessAttempted) { // 如果首次自動處理未執行或輸入框是空的
+                 // 再次嘗試自動處理，這通常發生在用戶與頁面有首次交互（點擊輸入框）後
+                await initialAutoProcess();
+            } else if (!urlInput.value) { // 如果只是輸入框空了，用戶點擊，嘗試填充但不強制認為是“首次自動開啟”
+                if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+                    try {
+                        const text = await navigator.clipboard.readText();
+                        if (text && (text.startsWith('http://') || text.startsWith('https://') || text.includes('.com') || text.includes('.net'))) {
+                            urlInput.value = text;
+                            statusText.textContent = '已從剪貼簿讀取網址。';
+                        }
+                    } catch(e) { /* silent fail on focus-paste */ }
+                }
             }
         });
 
