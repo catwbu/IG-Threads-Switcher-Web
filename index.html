@@ -92,35 +92,27 @@
 <body>
     <div class="container">
         <h1>IG/Threads 轉換器</h1>
-        <p class="clipboard-info">將嘗試自動讀取剪貼簿中的網址</p>
+        <p class="clipboard-info">將嘗試自動讀取剪貼簿中的網址並開啟</p>
         <input type="text" id="urlInput" placeholder="貼上或等待自動填入網址">
         <button id="goButton">轉換並開啟</button>
         <p id="statusText"></p>
     </div>
 
     <script>
-        // 您的 JavaScript 內容不變
         const urlInput = document.getElementById('urlInput');
         const goButton = document.getElementById('goButton');
         const statusText = document.getElementById('statusText');
 
-        // 核心轉換邏輯 (來自您的 popup.js)
         function getUsername(url) {
             let username = null;
             if (!url || typeof url !== 'string') return null;
-
-            // Instagram: instagram.com/username or instagram.com/username/
-            // 排除 /p/, /reel/, /reels/ 等路徑
             let igMatch = url.match(/instagram\.com\/([a-zA-Z0-9._]+)(?:\/(?!p\/|reel\/|reels\/|$))?/);
             if (igMatch && igMatch[1]) {
-                 // 確保捕獲的不是 'p', 'reel', 'reels' 等關鍵字本身
                 if (!['p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct'].includes(igMatch[1])) {
                     username = igMatch[1];
                     return { type: 'instagram', username: username };
                 }
             }
-            
-            // Threads: threads.net/@username or threads.net/@username/
             let threadsMatch = url.match(/threads\.(?:net|com)\/@([a-zA-Z0-9._]+)(?:\/|$)/);
             if (threadsMatch && threadsMatch[1]) {
                 username = threadsMatch[1];
@@ -133,7 +125,6 @@
             if (!originalUrl) return null;
             const userInfo = getUsername(originalUrl.trim());
             let newUrl = null;
-
             if (userInfo && userInfo.username) {
                 if (userInfo.type === 'instagram') {
                     newUrl = `https://www.threads.net/@${userInfo.username}`;
@@ -144,72 +135,86 @@
             return newUrl;
         }
 
-        // 處理按鈕點擊
+        function performConversionAndOpen(urlToConvert) {
+            const newUrl = convertUrl(urlToConvert);
+            if (newUrl) {
+                statusText.textContent = `轉換成功！正在開啟: ${newUrl.length > 50 ? newUrl.substring(0, 47) + '...' : newUrl}`;
+                try {
+                    const openedWindow = window.open(newUrl, '_blank');
+                    if (!openedWindow || openedWindow.closed || typeof openedWindow.closed === 'undefined') {
+                        // This condition checks if the window.open was blocked or failed
+                        statusText.textContent = '無法自動開啟新分頁。請檢查彈出視窗封鎖設定，或手動點擊按鈕。';
+                    }
+                } catch (e) {
+                    console.error("Error opening window: ", e);
+                    statusText.textContent = '開啟新分頁時發生錯誤。請手動點擊按鈕。';
+                }
+            } else {
+                statusText.textContent = '剪貼簿網址無法轉換。請檢查網址或手動點擊按鈕。';
+            }
+        }
+
         goButton.addEventListener('click', () => {
             const originalUrl = urlInput.value;
             if (!originalUrl) {
                 statusText.textContent = '請輸入或貼上網址。';
                 return;
             }
-
-            const newUrl = convertUrl(originalUrl);
-
-            if (newUrl) {
-                statusText.textContent = `正在開啟: ${newUrl}`;
-                window.open(newUrl, '_blank'); // 在新分頁開啟
-            } else {
-                statusText.textContent = '無法識別或不支援此網址格式。';
-            }
+            performConversionAndOpen(originalUrl);
         });
 
-        // 嘗試從剪貼簿讀取網址
-        async function tryReadFromClipboard() {
+        async function tryReadFromClipboardAndProcess() {
             if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
-                statusText.textContent = '您的瀏覽器不支援自動讀取剪貼簿。';
-                return;
+                // statusText.textContent = '您的瀏覽器不支援自動讀取剪貼簿。'; // 可以選擇不顯示此訊息，避免過多提示
+                return false; // 表示無法讀取
             }
 
             try {
-                // 檢查剪貼簿讀取權限狀態 (如果支援的話)
                 if (navigator.permissions && typeof navigator.permissions.query === 'function') {
                     const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
                     if (permissionStatus.state === 'denied') {
-                        statusText.textContent = '讀取剪貼簿權限被拒。請手動貼上網址。';
-                        return;
+                        statusText.textContent = '讀取剪貼簿權限被拒。請手動操作。';
+                        return false;
                     }
-                    // 如果是 'prompt', 瀏覽器會在實際讀取時詢問用戶
                 }
                 
                 const text = await navigator.clipboard.readText();
-                if (text) {
-                    // 簡單檢查是否可能是網址
-                    if (text.startsWith('http://') || text.startsWith('https://') || text.includes('.com') || text.includes('.net')) {
-                        urlInput.value = text;
-                        statusText.textContent = '已從剪貼簿讀取網址。';
-                        // 可選：自動觸發轉換
-                        // goButton.click(); 
-                    } else {
-                        statusText.textContent = '剪貼簿內容非有效網址。';
-                    }
+                if (text && (text.startsWith('http://') || text.startsWith('https://') || text.includes('.com') || text.includes('.net'))) {
+                    urlInput.value = text;
+                    statusText.textContent = '已從剪貼簿讀取網址，正在嘗試自動轉換...';
+                    performConversionAndOpen(text); // <--- 自動轉換和開啟
+                    return true; // 表示已處理
+                } else if (text) {
+                    // statusText.textContent = '剪貼簿內容非有效網址。'; // 如果只是普通文字，不清空輸入框
+                    return false;
                 } else {
-                    // statusText.textContent = '剪貼簿是空的。'; // 如果剪貼簿為空，可能不需要提示
+                    return false; // 剪貼簿為空
                 }
             } catch (err) {
                 console.error('讀取剪貼簿失敗:', err);
-                if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
-                     statusText.textContent = '讀取剪貼簿失敗。瀏覽器可能需要您先與頁面互動，或此功能受安全性限制。';
-                } else if (err.name === 'NotFoundError'){
-                     // 通常意味著剪貼簿是空的或不包含文本
-                     // statusText.textContent = '剪貼簿無文字內容可讀取。';
-                } else {
-                     statusText.textContent = '讀取剪貼簿時發生錯誤。';
-                }
+                // statusText.textContent = '讀取剪貼簿時發生錯誤。'; // 避免過多錯誤提示干擾
+                return false;
             }
         }
 
-        // 當頁面載入完成或輸入框獲得焦點時，嘗試讀取剪貼簿
-        window.addEventListener('load', tryReadFromClipboard);
-        urlInput.addEventListener('focus', tryReadFromClipboard); // 當使用者點擊輸入框時再次嘗試
+        // 頁面載入時和輸入框獲得焦點時，都嘗試讀取並處理
+        // 我們只希望自動開啟邏輯執行一次，避免重複開啟
+        let autoProcessAttempted = false;
+
+        async function initialAutoProcess() {
+            if (autoProcessAttempted) return;
+            autoProcessAttempted = true; // 標記已嘗試
+            await tryReadFromClipboardAndProcess();
+        }
+        
+        window.addEventListener('load', initialAutoProcess);
+        // 當使用者點擊輸入框時，如果之前自動處理失敗或剪貼簿內容已更新，可以再次嘗試，但不強制自動開啟
+        urlInput.addEventListener('focus', async () => {
+            // 如果輸入框是空的，可以再次嘗試填充，但不自動開啟
+            if (!urlInput.value) {
+                await tryReadFromClipboardAndProcess(); // 這會再次嘗試填充和開啟
+            }
+        });
 
     </script>
 </body>
