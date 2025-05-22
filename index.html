@@ -20,53 +20,65 @@
         }
         .container {
             background-color: #1e1e1e;
-            padding: 35px 30px; /* 增加容器內邊距 */
-            border-radius: 12px; /* 更圓滑的邊角 */
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); /* 強化容器陰影 */
+            padding: 35px 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
             width: 100%;
-            max-width: 420px; /* 容器最大寬度略微增加 */
+            max-width: 420px;
             text-align: center;
         }
+
+        /* 新增的圖示樣式 */
+        #pageMainIcon {
+            display: block;
+            margin: 0 auto 30px auto; /* 水平居中，下方留出間距 */
+            width: 70px;  /* 預設寬度，請根據您的 icon2.png 實際情況調整 */
+            height: 70px; /* 預設高度，如果圖示非正方形，可將其中一個設為 auto */
+            /* border-radius: 12px; */ /* 可選：為圖示加上圓角 */
+            /* box-shadow: 0 3px 8px rgba(0,0,0,0.2); */ /* 可選：為圖示加上細微陰影 */
+        }
+
         #urlInput {
             width: 100%;
-            padding: 18px 20px; /* 增加內邊距，使其更像按鈕 */
-            border-radius: 10px; /* 按鈕的圓角 */
-            border: 1px solid #4A4A4A; /* 調整邊框顏色 */
-            background-color: #2D2D2D; /* 按鈕背景色 */
-            color: #E0E0E0; /* 文字顏色（雖然它是 readonly） */
-            font-size: 17px; /* 略微增大字型大小 */
-            font-weight: 500; /* 中等字重 */
+            padding: 18px 20px;
+            border-radius: 10px;
+            border: 1px solid #4A4A4A;
+            background-color: #2D2D2D;
+            color: #E0E0E0;
+            font-size: 17px;
+            font-weight: 500;
             box-sizing: border-box;
             text-align: center;
-            cursor: pointer; /* 保持指標為手型 */
+            cursor: pointer;
             transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
-            outline: none; /* 移除預設的焦點外框 */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* 初始陰影，增加立體感 */
-            -webkit-tap-highlight-color: transparent; /* 移除行動裝置的點擊高亮效果 */
+            outline: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            -webkit-tap-highlight-color: transparent;
         }
         #urlInput::placeholder {
-            color: #B0B0B0; /* 預留位置文字使用較淺的顏色以提高可見性 */
-            opacity: 1; /* 確保預留位置文字完全不透明 */
-            font-weight: 500; /* 與輸入框字重一致 */
+            color: #B0B0B0;
+            opacity: 1;
+            font-weight: 500;
         }
         #urlInput:hover {
-            background-color: #353535; /* 滑鼠懸停時的背景色 */
-            border-color: #666666; /* 滑鼠懸停時的邊框色 */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* 滑鼠懸停時的陰影增強 */
+            background-color: #353535;
+            border-color: #666666;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
         #urlInput:active {
-            background-color: #3A3A3A; /* 點擊時的背景色 */
-            transform: scale(0.97); /* 輕微縮小以模擬按下效果 */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* 點擊時的陰影 */
+            background-color: #3A3A3A;
+            transform: scale(0.97);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        /* 確保 readonly 輸入框在視覺上更像按鈕 */
         #urlInput[readonly] {
-            user-select: none; /* 防止使用者選取按鈕上的文字 */
+            user-select: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <img src="icon2.png" alt="頁面圖示" id="pageMainIcon">
+        
         <input type="text" id="urlInput" placeholder="🔗 點擊貼上並開啟 IG/脆" readonly>
     </div>
 
@@ -114,17 +126,17 @@
         }
 
         async function handleClickToProcessAndOpen() {
-            console.log("Input clicked. Attempting to process clipboard..."); // 開發者日誌
+            console.log("Input clicked. Attempting to process clipboard...");
 
             try {
                 if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
-                    console.warn('Clipboard API not available or permission denied.'); // 開發者日誌
+                    console.warn('Clipboard API not available or permission denied.');
                     return; 
                 }
 
                 const text = await navigator.clipboard.readText();
                 if (!text || !text.trim()) {
-                    console.info('Clipboard is empty or contains only whitespace.'); // 開發者日誌
+                    console.info('Clipboard is empty or contains only whitespace.');
                     return; 
                 }
 
@@ -134,27 +146,26 @@
                 if (userInfo && userInfo.username) {
                     const convertedUrl = generateConvertedHttpsUrl(trimmedText, userInfo);
                     if (convertedUrl) {
-                        console.log(`Attempting to open converted URL: ${convertedUrl}`); // 開發者日誌
+                        console.log(`Attempting to open converted URL: ${convertedUrl}`);
                         const openedWindow = window.open(convertedUrl, '_blank');
                         if (!openedWindow || openedWindow.closed || (typeof openedWindow.closed !== 'undefined' && openedWindow.closed)) {
-                            console.warn('Popup blocked when trying to open:', convertedUrl); // 開發者日誌
+                            console.warn('Popup blocked when trying to open:', convertedUrl);
                         } else {
-                            console.info('Successfully attempted to open new tab for:', convertedUrl); // 開發者日誌
+                            console.info('Successfully attempted to open new tab for:', convertedUrl);
                         }
                     } else {
-                        console.warn('Could not convert URL from clipboard:', trimmedText); // 開發者日誌
+                        console.warn('Could not convert URL from clipboard:', trimmedText);
                     }
                 } else {
-                    console.info('Invalid or unsupported URL from clipboard:', trimmedText); // 開發者日誌
+                    console.info('Invalid or unsupported URL from clipboard:', trimmedText);
                 }
             } catch (err) {
-                console.error('Error during clipboard processing or opening link:', err); // 開發者日誌
+                console.error('Error during clipboard processing or opening link:', err);
             }
         }
 
         urlInput.addEventListener('click', handleClickToProcessAndOpen);
 
-        // 阻止使用者在 readonly 輸入框中輸入，使其行為更像按鈕
         urlInput.addEventListener('keydown', (e) => {
             e.preventDefault();
         });
