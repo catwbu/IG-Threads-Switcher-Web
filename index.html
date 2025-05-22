@@ -3,164 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IG/Threads 網址轉換器</title>
-    <link rel="icon" href="icon2.png" type="image/png">
-    <link rel="apple-touch-icon" href="icon2.png">
-    <style>
+    <title>IG/Threads 快速開啟</title>
+    <link rel="icon" href="icon2.png" type="image/png"> <link rel="apple-touch-icon" href="icon2.png"> <style>
         body {
-            background-color: #121212; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-            min-height: 100vh; margin: 0; padding: 30px 20px; box-sizing: border-box;
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* Center content vertically */
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
         }
         .container {
-            background-color: #1e1e1e; padding: 25px; border-radius: 10px;
+            background-color: #1e1e1e;
+            padding: 30px 25px; /* More padding */
+            border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            width: 100%; max-width: 380px; text-align: center;
+            width: 100%;
+            max-width: 400px; /* Slightly wider for better text display */
+            text-align: center;
         }
-
-        /* 成功狀態 UI */
-        #successView {
-            display: none; /* 初始隱藏 */
-            animation: fadeIn 0.5s ease-in-out;
+        #urlInput {
+            width: 100%;
+            padding: 15px; /* Larger padding */
+            margin-bottom: 20px; /* Space between input and status */
+            border-radius: 8px;
+            border: 1px solid #555;
+            background-color: #2c2c2c;
+            color: #fff;
+            font-size: 16px;
+            box-sizing: border-box;
+            text-align: center; /* Center placeholder text */
         }
-        #usernameDisplay {
-            font-size: 22px;
-            font-weight: bold;
-            color: #f0f0f0;
-            margin-bottom: 15px;
-            word-break: break-all;
+        #urlInput::placeholder {
+            color: #777;
         }
-        #avatarPlaceholder {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background-color: #4a4a4a;
-            border: 3px solid #666;
-            margin: 0 auto 20px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            background-image: url('profile.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-
-        /* 錯誤狀態 UI */
-        #errorView {
-            display: none; /* 初始隱藏 */
-            animation: fadeIn 0.5s ease-in-out;
-        }
-        #errorHintDisplay {
-            font-size: 20px;
-            font-weight: bold;
-            color: #ff6b6b;
-            margin-bottom: 15px;
-        }
-        #urlInputOnError {
-            width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px;
-            border: 1px solid #555; background-color: #2c2c2c; color: #fff;
-            font-size: 16px; box-sizing: border-box;
-        }
-        #urlInputOnError::placeholder { color: #777; }
-
-        .actionButton {
-            width: 100%; padding: 15px; background-color: #f2f1ef; color: #121212;
-            font-size: 18px; font-weight: bold; border: none; border-radius: 8px;
-            cursor: pointer; transition: background-color 0.2s ease, transform 0.1s ease;
-            margin-top: 10px;
-        }
-        .actionButton:hover { background-color: #e0e0e0; }
-        .actionButton:active { background-color: #cccccc; transform: scale(0.98); }
-
-        /* Spinner CSS */
-        .spinner {
-            border: 4px solid rgba(224, 224, 224, 0.3); /* Softer track color */
-            border-left-color: #f2f1ef; /* Spinner active part - matches button text color */
-            border-radius: 50%;
-            width: 30px; /* Spinner size */
-            height: 30px; /* Spinner size */
-            animation: spin 1s linear infinite;
-            margin: 20px auto 0 auto; /* Centered, with top margin like statusText used to have alone */
-            display: none; /* Initially hidden */
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
         #statusText {
-            margin-top: 20px; /* This margin applies when spinner is hidden and text is shown */
-            min-height: 20px; /* Original min-height */
+            min-height: 20px;
             font-size: 15px;
-            line-height: 1.4;
+            line-height: 1.5; /* Improved line height */
             transition: color 0.3s ease;
+            word-wrap: break-word; /* Prevent overflow for long URLs */
         }
         .status-success { color: #82c91e; }
         .status-error { color: #ff6b6b; }
         .status-info { color: #74c0fc; }
-        /* .status-processing class is no longer used for text */
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div id="successView">
-            <div id="usernameDisplay">@username</div>
-            <div id="avatarPlaceholder"></div>
-            <button id="openInAppButtonSuccess" class="actionButton">在 App 中開啟</button>
-        </div>
-
-        <div id="errorView">
-            <div id="errorHintDisplay">網址錯誤</div>
-            <input type="text" id="urlInputOnError" placeholder="貼上 IG/Threads 個人網址">
-            <button id="openInAppButtonError" class="actionButton" style="display: none;">在 App 中開啟</button>
-        </div>
-
-        <div id="loadingSpinner" class="spinner"></div> <p id="statusText"></p>
+        <input type="text" id="urlInput" placeholder="點擊此處貼上 IG/Threads 個人檔案網址">
+        <p id="statusText">點擊輸入框即可自動貼上並嘗試開啟。</p>
     </div>
 
     <script>
-        const successView = document.getElementById('successView');
-        const usernameDisplayEl = document.getElementById('usernameDisplay');
-        const openInAppButtonSuccess = document.getElementById('openInAppButtonSuccess');
-
-        const errorView = document.getElementById('errorView');
-        const errorHintDisplayEl = document.getElementById('errorHintDisplay');
-        const urlInputOnErrorEl = document.getElementById('urlInputOnError');
-        const openInAppButtonError = document.getElementById('openInAppButtonError');
-
+        const urlInput = document.getElementById('urlInput');
         const statusTextEl = document.getElementById('statusText');
-        const loadingSpinner = document.getElementById('loadingSpinner'); // Get spinner element
-
-        let currentConvertedHttpsUrl = null;
-        let currentAppType = '';
+        let currentAppType = ''; // To know which platform is being converted to
+        let debounceTimer;
 
         function getUsernameAndType(url) {
-            // ... (no changes to this function)
-            let username = null;
             if (!url || typeof url !== 'string') return null;
-            let igMatch = url.match(/instagram\.com\/([a-zA-Z0-9._]+)(?:\/(?!p\/|reel\/|reels\/|$))?/);
-            if (igMatch && igMatch[1]) {
-                if (!['p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct'].includes(igMatch[1])) {
-                    return { type: 'instagram', username: igMatch[1] };
-                }
-            }
-            let threadsMatch = url.match(/threads\.(?:net|com)\/@([a-zA-Z0-9._]+)(?:\/|$)/);
+            url = url.trim();
+
+            // Threads: threads.net/@username or threads.com/@username
+            // The @ symbol is key for Threads profile URLs.
+            let threadsMatch = url.match(/threads\.(?:net|com)\/@([a-zA-Z0-9._]+)/);
             if (threadsMatch && threadsMatch[1]) {
                 return { type: 'threads', username: threadsMatch[1] };
+            }
+
+            // Instagram: instagram.com/username
+            // Extract the first path component after instagram.com/
+            // Ensure it's not a common reserved path like /p/, /reels/, /explore/ etc.
+            let igPathMatch = url.match(/instagram\.com\/([^/?#]+)/);
+            if (igPathMatch && igPathMatch[1]) {
+                const usernameCandidate = igPathMatch[1];
+                const reservedIgPaths = [
+                    'p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct', 
+                    'guides', 'tv', 'igtv', 'tagged', 'saved', 'settings', 'legal', 
+                    'about', 'press', 'api', 'help', 'login', 'logout', 'challenge', 
+                    'download', 'search', 'directory'
+                ];
+                if (!reservedIgPaths.includes(usernameCandidate.toLowerCase())) {
+                    // Check if there are further path segments that would indicate it's not a base profile URL
+                    // e.g. instagram.com/username/saved/ - this is fine, username is still the primary
+                    // We are interested in the username part for conversion.
+                    return { type: 'instagram', username: usernameCandidate };
+                }
             }
             return null;
         }
 
-        function generateConvertedHttpsUrl(originalUrl) {
-            // ... (no changes to this function)
-            const userInfo = getUsernameAndType(originalUrl.trim());
+        function generateConvertedHttpsUrl(originalUrl, userInfo) {
+            if (!userInfo) { // If userInfo not passed, try to get it
+                userInfo = getUsernameAndType(originalUrl); // originalUrl is already trimmed
+            }
             if (userInfo && userInfo.username) {
                 currentAppType = userInfo.type;
                 if (userInfo.type === 'instagram') {
@@ -169,155 +111,107 @@
                     return `https://www.instagram.com/${userInfo.username}/`;
                 }
             }
-            currentAppType = '';
+            currentAppType = ''; // Reset if no conversion
             return null;
-        }
-        
-        function showLoadingState() {
-            successView.style.display = 'none';
-            errorView.style.display = 'none';
-            usernameDisplayEl.textContent = ''; 
-            openInAppButtonError.style.display = 'none';
-            
-            if (loadingSpinner) loadingSpinner.style.display = 'block';
-            if (statusTextEl) {
-                statusTextEl.style.display = 'none'; // Hide status text area
-                statusTextEl.textContent = ''; // Clear old status text
-            }
-        }
-
-        function hideLoadingState() {
-            if (loadingSpinner) loadingSpinner.style.display = 'none';
-            if (statusTextEl) statusTextEl.style.display = 'block'; // Make space for status text
         }
 
         function updateStatus(message, type = 'info') {
-            // Ensure loading state is hidden before showing status
-            // This is mostly for calls outside of setupSuccessUI/setupErrorUI, like in input listener
-            if (loadingSpinner.style.display === 'block') {
-                 hideLoadingState();
-            }
             statusTextEl.textContent = message;
-            statusTextEl.className = 'status-' + type; 
+            statusTextEl.className = 'status-' + type;
         }
 
-        function setupSuccessUI(username, convertedUrl) {
-            hideLoadingState(); // Hide spinner, show status text area
-            usernameDisplayEl.textContent = `@${username}`;
-            currentConvertedHttpsUrl = convertedUrl;
-            const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
-            openInAppButtonSuccess.textContent = `在 ${targetPlatform} App 中開啟 ${username}`;
-
-            successView.style.display = 'block';
-            errorView.style.display = 'none';
-            updateStatus(`已為 @${username} 準備就緒！請點擊按鈕開啟。`, 'success');
-        }
-
-        function setupErrorUI(hint, errorMessage, showInput = true, originalInputText = "") {
-            hideLoadingState(); // Hide spinner, show status text area
-            errorHintDisplayEl.textContent = hint;
-            if (showInput) {
-                urlInputOnErrorEl.style.display = 'block';
-                urlInputOnErrorEl.value = originalInputText;
-            } else {
-                urlInputOnErrorEl.style.display = 'none';
-            }
-            openInAppButtonError.style.display = 'none';
-
-            successView.style.display = 'none';
-            errorView.style.display = 'block';
-            updateStatus(errorMessage, 'error');
-        }
-
-        function openApp() {
-            // ... (no changes to this function)
-            if (currentConvertedHttpsUrl) {
-                const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
-                updateStatus(`正在嘗試開啟 ${targetPlatform} App...`, 'info'); // This status is fine as it's user-initiated action
-                const openedWindow = window.open(currentConvertedHttpsUrl, '_blank');
-                if (!openedWindow || openedWindow.closed || (typeof openedWindow.closed !== 'undefined' && openedWindow.closed)) {
-                    setTimeout(() => {
-                        updateStatus('如果 App 未開啟，請檢查瀏覽器的彈出視窗設定或確認 App 已安裝。', 'error');
-                    }, 1000);
-                }
-            } else {
-                updateStatus('沒有可開啟的有效網址。', 'error');
-            }
-        }
-
-        openInAppButtonSuccess.addEventListener('click', openApp);
-        openInAppButtonError.addEventListener('click', openApp);
-
-        async function autoProcessClipboard() {
-            showLoadingState(); // Show spinner and reset UI elements
-
-            // Removed: updateStatus('正在讀取剪貼簿並處理...', 'processing');
-            // Removed: await new Promise(resolve => setTimeout(resolve, 300)); // No longer needed
-
-            if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
-                setupErrorUI('剪貼簿功能異常', '您的瀏覽器不支援或未允許讀取剪貼簿。請手動輸入網址。', true, "");
+        async function processAndOpenUrl(urlToProcess) {
+            if (!urlToProcess || !urlToProcess.trim()) {
+                updateStatus('輸入框為空。請點擊以貼上網址。', 'info');
                 return;
             }
 
-            try {
-                const text = await navigator.clipboard.readText();
-                if (text && text.trim() !== '') {
-                    const userInfo = getUsernameAndType(text);
-                    currentConvertedHttpsUrl = generateConvertedHttpsUrl(text);
+            updateStatus('正在處理網址...', 'info');
+            const userInfo = getUsernameAndType(urlToProcess);
 
-                    if (userInfo && currentConvertedHttpsUrl) {
-                        setupSuccessUI(userInfo.username, currentConvertedHttpsUrl);
+            if (userInfo && userInfo.username) {
+                const convertedUrl = generateConvertedHttpsUrl(urlToProcess, userInfo);
+                if (convertedUrl) {
+                    const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
+                    updateStatus(`識別為 @${userInfo.username}。正在 ${targetPlatform} 中開啟...`, 'success');
+                    
+                    const openedWindow = window.open(convertedUrl, '_blank');
+                    if (!openedWindow || openedWindow.closed || (typeof openedWindow.closed !== 'undefined' && openedWindow.closed)) {
+                        setTimeout(() => {
+                            urlInput.value = convertedUrl; // Put the converted URL in the input
+                            urlInput.select(); // Select it for easy copying
+                            updateStatus(`無法自動開啟。${targetPlatform} 的網址已填入上方，請手動複製並開啟。`, 'error');
+                        }, 1200); // Delay to allow user to read "Opening..."
                     } else {
-                        setupErrorUI('網址格式無效', '剪貼簿中的網址無法識別或不受支援。已填入下方供您修改。', true, text);
+                        setTimeout(() => {
+                            updateStatus(`已嘗試開啟 @${userInfo.username}。您可以點擊輸入框處理新的網址。`, 'info');
+                            // urlInput.value = ''; // Optionally clear input
+                        }, 2000);
                     }
                 } else {
-                    setupErrorUI('剪貼簿為空', '請在下方輸入框中貼上或輸入網址。', true, "");
+                    updateStatus('無法轉換此網址。請確認格式是否正確。', 'error');
                 }
-            } catch (err) {
-                console.error('讀取剪貼簿失敗:', err);
-                let errorMsg = '讀取剪貼簿時發生未知錯誤。';
-                if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
-                    errorMsg = '讀取剪貼簿權限被拒。您可能需要在瀏覽器設定中允許，或與頁面互動後重試。';
-                } else if (err.message && err.message.includes('clipboard is not focused')) {
-                    // This error is less common now with visibilitychange, but good to keep
-                    errorMsg = '請先點擊頁面（或切換回此分頁）以啟用剪貼簿讀取功能。';
-                }
-                setupErrorUI('讀取剪貼簿失敗', errorMsg, true, "");
+            } else {
+                updateStatus('網址格式無效。請貼上 Instagram 或 Threads 個人檔案網址。', 'error');
             }
         }
 
-        urlInputOnErrorEl.addEventListener('input', () => {
-            const url = urlInputOnErrorEl.value;
-            const userInfo = getUsernameAndType(url);
-            currentConvertedHttpsUrl = generateConvertedHttpsUrl(url);
-
-            if (userInfo && currentConvertedHttpsUrl) {
-                const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
-                openInAppButtonError.textContent = `在 ${targetPlatform} App 中開啟 ${userInfo.username}`;
-                openInAppButtonError.style.display = 'block';
-                updateStatus(`網址有效！可點擊為 @${userInfo.username} 開啟。`, 'success');
-            } else {
-                openInAppButtonError.style.display = 'none';
-                if (url.trim() !== '') {
-                    updateStatus('輸入的網址格式無法識別。', 'error');
-                } else {
-                    updateStatus('請貼上或輸入網址。', 'info');
+        async function handleInputInteraction() {
+            updateStatus('正在嘗試從剪貼簿貼上...', 'info');
+            try {
+                if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
+                    updateStatus('瀏覽器不支援或未允許讀取剪貼簿。請手動貼上網址。', 'error');
+                    urlInput.focus(); // Keep focus for manual paste
+                    return;
                 }
+
+                const text = await navigator.clipboard.readText();
+                if (text && text.trim() !== '') {
+                    urlInput.value = text.trim();
+                    updateStatus('已從剪貼簿貼上。正在處理...', 'info');
+                    await processAndOpenUrl(text.trim());
+                } else {
+                    updateStatus('剪貼簿為空。請複製網址後再試，或手動輸入。', 'info');
+                    // Don't clear input if it was manually filled before focus
+                }
+            } catch (err) {
+                console.error('剪貼簿讀取失敗:', err);
+                let errorMsg = '讀取剪貼簿失敗。';
+                if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
+                    errorMsg = '讀取剪貼簿權限被拒。請允許權限或手動貼上。';
+                } else if (err.message && err.message.includes('clipboard is not focused')) {
+                     errorMsg = '請再次點擊頁面或輸入框以啟用剪貼簿。';
+                }
+                updateStatus(errorMsg, 'error');
             }
-        });
-        
-        window.addEventListener('load', () => {
-            autoProcessClipboard();
+        }
+
+        urlInput.addEventListener('focus', handleInputInteraction);
+        // Also handle click, as focus might not re-trigger if already focused
+        urlInput.addEventListener('click', () => {
+            // If already focused and clicked, re-run paste logic if input is empty
+            // or if user explicitly wants to re-paste.
+            // For simplicity, let's allow click to always try to paste, consistent with "點擊輸入筐會自動帶入"
+            if(document.activeElement !== urlInput) { // If not already focused, focus event will handle it
+                return;
+            }
+            handleInputInteraction();
         });
 
-        // Reload clipboard when tab becomes visible
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                // To prevent potential issues if clipboard access requires focused document,
-                // give a very slight delay. Some browsers are picky.
-                setTimeout(autoProcessClipboard, 100); 
+
+        urlInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            const currentUrl = urlInput.value;
+            if (!currentUrl.trim()) {
+                updateStatus('請點擊輸入框以貼上，或手動輸入網址。', 'info');
+                return;
             }
+            // Debounce processing for manual input
+            debounceTimer = setTimeout(() => {
+                processAndOpenUrl(currentUrl.trim());
+            }, 750); // Adjust debounce time as needed
         });
+
     </script>
 </body>
 </html>
