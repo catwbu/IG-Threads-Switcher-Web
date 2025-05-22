@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IG/Threads 快速開啟</title>
-    <link rel="icon" href="icon2.png" type="image/png"> <link rel="apple-touch-icon" href="icon2.png"> <style>
+    <title>IG/脆 快速開啟</title>
+    <link rel="icon" href="icon2.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon2.png">
+    <style>
         body {
             background-color: #121212;
             color: #e0e0e0;
@@ -12,7 +14,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* Center content vertically */
+            justify-content: center;
             min-height: 100vh;
             margin: 0;
             padding: 20px;
@@ -20,24 +22,24 @@
         }
         .container {
             background-color: #1e1e1e;
-            padding: 30px 25px; /* More padding */
+            padding: 30px 25px;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             width: 100%;
-            max-width: 400px; /* Slightly wider for better text display */
+            max-width: 400px;
             text-align: center;
         }
         #urlInput {
             width: 100%;
-            padding: 15px; /* Larger padding */
-            margin-bottom: 20px; /* Space between input and status */
+            padding: 15px;
+            margin-bottom: 20px;
             border-radius: 8px;
             border: 1px solid #555;
             background-color: #2c2c2c;
             color: #fff;
             font-size: 16px;
             box-sizing: border-box;
-            text-align: center; /* Center placeholder text */
+            text-align: center;
         }
         #urlInput::placeholder {
             color: #777;
@@ -45,9 +47,9 @@
         #statusText {
             min-height: 20px;
             font-size: 15px;
-            line-height: 1.5; /* Improved line height */
+            line-height: 1.5;
             transition: color 0.3s ease;
-            word-wrap: break-word; /* Prevent overflow for long URLs */
+            word-wrap: break-word;
         }
         .status-success { color: #82c91e; }
         .status-error { color: #ff6b6b; }
@@ -56,30 +58,28 @@
 </head>
 <body>
     <div class="container">
-        <input type="text" id="urlInput" placeholder="點擊此處貼上 IG/Threads 個人檔案網址">
+        <input type="text" id="urlInput" placeholder="點擊此處貼上 IG/脆 個人檔案網址">
         <p id="statusText">點擊輸入框即可自動貼上並嘗試開啟。</p>
     </div>
 
     <script>
         const urlInput = document.getElementById('urlInput');
         const statusTextEl = document.getElementById('statusText');
-        let currentAppType = ''; // To know which platform is being converted to
+        let currentAppType = ''; // 用於判斷轉換目標的狀態
         let debounceTimer;
+        let isProgrammaticChange = false; // 防止腳本修改輸入框時觸發input事件的旗標
 
         function getUsernameAndType(url) {
             if (!url || typeof url !== 'string') return null;
             url = url.trim();
 
-            // Threads: threads.net/@username or threads.com/@username
-            // The @ symbol is key for Threads profile URLs.
+            // 脆 (Threads): threads.net/@username or threads.com/@username
             let threadsMatch = url.match(/threads\.(?:net|com)\/@([a-zA-Z0-9._]+)/);
             if (threadsMatch && threadsMatch[1]) {
                 return { type: 'threads', username: threadsMatch[1] };
             }
 
             // Instagram: instagram.com/username
-            // Extract the first path component after instagram.com/
-            // Ensure it's not a common reserved path like /p/, /reels/, /explore/ etc.
             let igPathMatch = url.match(/instagram\.com\/([^/?#]+)/);
             if (igPathMatch && igPathMatch[1]) {
                 const usernameCandidate = igPathMatch[1];
@@ -90,9 +90,6 @@
                     'download', 'search', 'directory'
                 ];
                 if (!reservedIgPaths.includes(usernameCandidate.toLowerCase())) {
-                    // Check if there are further path segments that would indicate it's not a base profile URL
-                    // e.g. instagram.com/username/saved/ - this is fine, username is still the primary
-                    // We are interested in the username part for conversion.
                     return { type: 'instagram', username: usernameCandidate };
                 }
             }
@@ -100,18 +97,18 @@
         }
 
         function generateConvertedHttpsUrl(originalUrl, userInfo) {
-            if (!userInfo) { // If userInfo not passed, try to get it
-                userInfo = getUsernameAndType(originalUrl); // originalUrl is already trimmed
+            if (!userInfo) { // 如果沒有傳入userInfo，則嘗試從URL獲取
+                userInfo = getUsernameAndType(originalUrl);
             }
             if (userInfo && userInfo.username) {
-                currentAppType = userInfo.type;
+                currentAppType = userInfo.type; // 設定當前處理的App類型
                 if (userInfo.type === 'instagram') {
                     return `https://www.threads.net/@${userInfo.username}`;
                 } else if (userInfo.type === 'threads') {
                     return `https://www.instagram.com/${userInfo.username}/`;
                 }
             }
-            currentAppType = ''; // Reset if no conversion
+            currentAppType = ''; // 如果無法轉換，重置App類型
             return null;
         }
 
@@ -131,28 +128,34 @@
 
             if (userInfo && userInfo.username) {
                 const convertedUrl = generateConvertedHttpsUrl(urlToProcess, userInfo);
+                // currentAppType 會在 generateConvertedHttpsUrl 中被設定
+                const targetPlatformUiName = currentAppType === 'instagram' ? '脆 (Threads)' : 'Instagram';
+
                 if (convertedUrl) {
-                    const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
-                    updateStatus(`識別為 @${userInfo.username}。正在 ${targetPlatform} 中開啟...`, 'success');
+                    updateStatus(`識別為 @${userInfo.username}。正在 ${targetPlatformUiName} 中開啟...`, 'success');
                     
-                    const openedWindow = window.open(convertedUrl, '_blank');
+                    const openedWindow = window.open(convertedUrl, '_blank'); // 在新分頁中開啟
+                    
                     if (!openedWindow || openedWindow.closed || (typeof openedWindow.closed !== 'undefined' && openedWindow.closed)) {
+                        // 彈窗被阻擋的處理
                         setTimeout(() => {
-                            urlInput.value = convertedUrl; // Put the converted URL in the input
-                            urlInput.select(); // Select it for easy copying
-                            updateStatus(`無法自動開啟。${targetPlatform} 的網址已填入上方，請手動複製並開啟。`, 'error');
-                        }, 1200); // Delay to allow user to read "Opening..."
+                            isProgrammaticChange = true; // 設定旗標，表示接下來的value變更是腳本操作
+                            urlInput.value = convertedUrl;
+                            urlInput.select(); // 選取轉換後的網址，方便使用者複製
+                            updateStatus(`無法自動開啟。${targetPlatformUiName} 的網址已填入上方，請手動複製並開啟。`, 'error');
+                            setTimeout(() => { isProgrammaticChange = false; }, 0); // 在下一個事件迴圈中重置旗標
+                        }, 1200);
                     } else {
+                        // 成功開啟
                         setTimeout(() => {
                             updateStatus(`已嘗試開啟 @${userInfo.username}。您可以點擊輸入框處理新的網址。`, 'info');
-                            // urlInput.value = ''; // Optionally clear input
                         }, 2000);
                     }
                 } else {
                     updateStatus('無法轉換此網址。請確認格式是否正確。', 'error');
                 }
             } else {
-                updateStatus('網址格式無效。請貼上 Instagram 或 Threads 個人檔案網址。', 'error');
+                updateStatus('網址格式無效。請貼上 Instagram 或 脆 (Threads) 個人檔案網址。', 'error');
             }
         }
 
@@ -161,18 +164,20 @@
             try {
                 if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
                     updateStatus('瀏覽器不支援或未允許讀取剪貼簿。請手動貼上網址。', 'error');
-                    urlInput.focus(); // Keep focus for manual paste
+                    urlInput.focus(); // 確保輸入框獲得焦點以便手動輸入
                     return;
                 }
 
                 const text = await navigator.clipboard.readText();
                 if (text && text.trim() !== '') {
+                    isProgrammaticChange = true; // 設定旗標
                     urlInput.value = text.trim();
                     updateStatus('已從剪貼簿貼上。正在處理...', 'info');
+                    setTimeout(() => { isProgrammaticChange = false; }, 0); // 重置旗標
+                    
                     await processAndOpenUrl(text.trim());
                 } else {
                     updateStatus('剪貼簿為空。請複製網址後再試，或手動輸入。', 'info');
-                    // Don't clear input if it was manually filled before focus
                 }
             } catch (err) {
                 console.error('剪貼簿讀取失敗:', err);
@@ -186,32 +191,33 @@
             }
         }
 
+        // 當輸入框獲得焦點時，觸發貼上和處理邏輯
         urlInput.addEventListener('focus', handleInputInteraction);
-        // Also handle click, as focus might not re-trigger if already focused
+        
+        // 當點擊已獲得焦點的輸入框時，也觸發（允許使用者透過再次點擊來重新貼上/處理）
         urlInput.addEventListener('click', () => {
-            // If already focused and clicked, re-run paste logic if input is empty
-            // or if user explicitly wants to re-paste.
-            // For simplicity, let's allow click to always try to paste, consistent with "點擊輸入筐會自動帶入"
-            if(document.activeElement !== urlInput) { // If not already focused, focus event will handle it
-                return;
+            if (document.activeElement === urlInput) {
+                handleInputInteraction();
             }
-            handleInputInteraction();
+            // 如果點擊導致輸入框首次獲得焦點， 'focus' 事件會處理 handleInputInteraction
         });
 
-
+        // 當使用者手動在輸入框中輸入內容時
         urlInput.addEventListener('input', () => {
-            clearTimeout(debounceTimer);
+            if (isProgrammaticChange) {
+                return; // 如果是腳本造成的變更，則忽略，避免迴圈
+            }
+            clearTimeout(debounceTimer); // 清除之前的計時器
             const currentUrl = urlInput.value;
-            if (!currentUrl.trim()) {
+            if (!currentUrl.trim()) { // 如果輸入框被清空
                 updateStatus('請點擊輸入框以貼上，或手動輸入網址。', 'info');
                 return;
             }
-            // Debounce processing for manual input
+            // 設定一個延遲，在使用者停止輸入後再處理
             debounceTimer = setTimeout(() => {
                 processAndOpenUrl(currentUrl.trim());
-            }, 750); // Adjust debounce time as needed
+            }, 750); // 750毫秒的延遲
         });
-
     </script>
 </body>
 </html>
