@@ -74,18 +74,33 @@
         .actionButton:hover { background-color: #e0e0e0; }
         .actionButton:active { background-color: #cccccc; transform: scale(0.98); }
 
+        /* Spinner CSS */
+        .spinner {
+            border: 4px solid rgba(224, 224, 224, 0.3); /* Softer track color */
+            border-left-color: #f2f1ef; /* Spinner active part - matches button text color */
+            border-radius: 50%;
+            width: 30px; /* Spinner size */
+            height: 30px; /* Spinner size */
+            animation: spin 1s linear infinite;
+            margin: 20px auto 0 auto; /* Centered, with top margin like statusText used to have alone */
+            display: none; /* Initially hidden */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         #statusText {
-            margin-top: 20px;
-            min-height: 20px;
+            margin-top: 20px; /* This margin applies when spinner is hidden and text is shown */
+            min-height: 20px; /* Original min-height */
             font-size: 15px;
             line-height: 1.4;
-            transition: color 0.3s ease; /* 讓顏色轉換更平滑 */
+            transition: color 0.3s ease;
         }
         .status-success { color: #82c91e; }
         .status-error { color: #ff6b6b; }
         .status-info { color: #74c0fc; }
-        .status-processing { color: #fcc419; } /* 黃色/橙色 用於處理中 */
-
+        /* .status-processing class is no longer used for text */
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
@@ -107,7 +122,7 @@
             <button id="openInAppButtonError" class="actionButton" style="display: none;">在 App 中開啟</button>
         </div>
 
-        <p id="statusText"></p>
+        <div id="loadingSpinner" class="spinner"></div> <p id="statusText"></p>
     </div>
 
     <script>
@@ -121,11 +136,13 @@
         const openInAppButtonError = document.getElementById('openInAppButtonError');
 
         const statusTextEl = document.getElementById('statusText');
+        const loadingSpinner = document.getElementById('loadingSpinner'); // Get spinner element
 
         let currentConvertedHttpsUrl = null;
         let currentAppType = '';
 
         function getUsernameAndType(url) {
+            // ... (no changes to this function)
             let username = null;
             if (!url || typeof url !== 'string') return null;
             let igMatch = url.match(/instagram\.com\/([a-zA-Z0-9._]+)(?:\/(?!p\/|reel\/|reels\/|$))?/);
@@ -142,6 +159,7 @@
         }
 
         function generateConvertedHttpsUrl(originalUrl) {
+            // ... (no changes to this function)
             const userInfo = getUsernameAndType(originalUrl.trim());
             if (userInfo && userInfo.username) {
                 currentAppType = userInfo.type;
@@ -154,29 +172,53 @@
             currentAppType = '';
             return null;
         }
+        
+        function showLoadingState() {
+            successView.style.display = 'none';
+            errorView.style.display = 'none';
+            usernameDisplayEl.textContent = ''; 
+            openInAppButtonError.style.display = 'none';
+            
+            if (loadingSpinner) loadingSpinner.style.display = 'block';
+            if (statusTextEl) {
+                statusTextEl.style.display = 'none'; // Hide status text area
+                statusTextEl.textContent = ''; // Clear old status text
+            }
+        }
+
+        function hideLoadingState() {
+            if (loadingSpinner) loadingSpinner.style.display = 'none';
+            if (statusTextEl) statusTextEl.style.display = 'block'; // Make space for status text
+        }
 
         function updateStatus(message, type = 'info') {
+            // Ensure loading state is hidden before showing status
+            // This is mostly for calls outside of setupSuccessUI/setupErrorUI, like in input listener
+            if (loadingSpinner.style.display === 'block') {
+                 hideLoadingState();
+            }
             statusTextEl.textContent = message;
-            statusTextEl.className = 'status-' + type; // 會替換掉所有 class，只留下 status-type
+            statusTextEl.className = 'status-' + type; 
         }
 
         function setupSuccessUI(username, convertedUrl) {
-            usernameDisplayEl.textContent = `@${username}`; // 更新 username
+            hideLoadingState(); // Hide spinner, show status text area
+            usernameDisplayEl.textContent = `@${username}`;
             currentConvertedHttpsUrl = convertedUrl;
             const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
-            openInAppButtonSuccess.textContent = `在 ${targetPlatform} App 中開啟 ${username}`; // 按鈕文字也更新
+            openInAppButtonSuccess.textContent = `在 ${targetPlatform} App 中開啟 ${username}`;
 
             successView.style.display = 'block';
             errorView.style.display = 'none';
-            // 強調是新載入的成功狀態
             updateStatus(`已為 @${username} 準備就緒！請點擊按鈕開啟。`, 'success');
         }
 
         function setupErrorUI(hint, errorMessage, showInput = true, originalInputText = "") {
+            hideLoadingState(); // Hide spinner, show status text area
             errorHintDisplayEl.textContent = hint;
             if (showInput) {
                 urlInputOnErrorEl.style.display = 'block';
-                urlInputOnErrorEl.value = originalInputText; // 保留用戶/剪貼簿的無效輸入
+                urlInputOnErrorEl.value = originalInputText;
             } else {
                 urlInputOnErrorEl.style.display = 'none';
             }
@@ -188,9 +230,10 @@
         }
 
         function openApp() {
+            // ... (no changes to this function)
             if (currentConvertedHttpsUrl) {
                 const targetPlatform = currentAppType === 'instagram' ? 'Threads' : 'Instagram';
-                updateStatus(`正在嘗試開啟 ${targetPlatform} App...`, 'info');
+                updateStatus(`正在嘗試開啟 ${targetPlatform} App...`, 'info'); // This status is fine as it's user-initiated action
                 const openedWindow = window.open(currentConvertedHttpsUrl, '_blank');
                 if (!openedWindow || openedWindow.closed || (typeof openedWindow.closed !== 'undefined' && openedWindow.closed)) {
                     setTimeout(() => {
@@ -206,12 +249,10 @@
         openInAppButtonError.addEventListener('click', openApp);
 
         async function autoProcessClipboard() {
-            // 1. 視覺重置並顯示處理中狀態
-            successView.style.display = 'none';
-            errorView.style.display = 'none';
-            openInAppButtonError.style.display = 'none'; // 確保錯誤頁的按鈕也先隱藏
-            usernameDisplayEl.textContent = ''; // 清空上一個用戶名
-            updateStatus('正在讀取剪貼簿並處理...', 'processing'); // 新增 processing 狀態
+            showLoadingState(); // Show spinner and reset UI elements
+
+            // Removed: updateStatus('正在讀取剪貼簿並處理...', 'processing');
+            // Removed: await new Promise(resolve => setTimeout(resolve, 300)); // No longer needed
 
             if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
                 setupErrorUI('剪貼簿功能異常', '您的瀏覽器不支援或未允許讀取剪貼簿。請手動輸入網址。', true, "");
@@ -219,9 +260,6 @@
             }
 
             try {
-                // 稍微延遲一下，讓 "處理中" 訊息有機會被使用者看到
-                await new Promise(resolve => setTimeout(resolve, 300));
-
                 const text = await navigator.clipboard.readText();
                 if (text && text.trim() !== '') {
                     const userInfo = getUsernameAndType(text);
@@ -230,7 +268,6 @@
                     if (userInfo && currentConvertedHttpsUrl) {
                         setupSuccessUI(userInfo.username, currentConvertedHttpsUrl);
                     } else {
-                        // 將無效的剪貼簿內容放入輸入框供用戶修改
                         setupErrorUI('網址格式無效', '剪貼簿中的網址無法識別或不受支援。已填入下方供您修改。', true, text);
                     }
                 } else {
@@ -242,7 +279,8 @@
                 if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
                     errorMsg = '讀取剪貼簿權限被拒。您可能需要在瀏覽器設定中允許，或與頁面互動後重試。';
                 } else if (err.message && err.message.includes('clipboard is not focused')) {
-                    errorMsg = '請先點擊頁面以啟用剪貼簿讀取功能。';
+                    // This error is less common now with visibilitychange, but good to keep
+                    errorMsg = '請先點擊頁面（或切換回此分頁）以啟用剪貼簿讀取功能。';
                 }
                 setupErrorUI('讀取剪貼簿失敗', errorMsg, true, "");
             }
@@ -270,6 +308,15 @@
         
         window.addEventListener('load', () => {
             autoProcessClipboard();
+        });
+
+        // Reload clipboard when tab becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                // To prevent potential issues if clipboard access requires focused document,
+                // give a very slight delay. Some browsers are picky.
+                setTimeout(autoProcessClipboard, 100); 
+            }
         });
     </script>
 </body>
