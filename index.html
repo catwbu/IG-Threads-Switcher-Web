@@ -3,220 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IG/脆 快速開啟</title>
-    <link rel="icon" href="icon2.png" type="image/png">
-    <link rel="apple-touch-icon" href="icon2.png">
+    <title>新分頁開啟測試</title>
     <style>
-        body {
-            background-color: #121212;
-            color: #e0e0e0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background-color: #f4f4f4; 
+            text-align: center; 
         }
         .container {
-            background-color: #1e1e1e;
-            padding: 30px 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-        #urlInput {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 30px;
             border-radius: 8px;
-            border: 1px solid #555;
-            background-color: #2c2c2c;
-            color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            display: inline-block;
+        }
+        input[type="text"] { 
+            width: 300px; 
+            padding: 10px; 
+            margin-bottom: 15px; 
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button { 
+            padding: 10px 20px; 
             font-size: 16px;
-            box-sizing: border-box;
-            text-align: center;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
         }
-        #urlInput::placeholder {
-            color: #777;
+        button:hover {
+            background-color: #0056b3;
         }
-        #statusText {
-            min-height: 20px;
-            font-size: 15px;
-            line-height: 1.5;
-            transition: color 0.3s ease;
-            word-wrap: break-word;
+        #message {
+            margin-top: 20px;
+            color: green;
+            font-weight: bold;
         }
-        .status-success { color: #82c91e; }
-        .status-error { color: #ff6b6b; }
-        .status-info { color: #74c0fc; }
     </style>
 </head>
 <body>
     <div class="container">
-        <input type="text" id="urlInput" placeholder="點擊此處貼上 IG/脆 個人檔案網址">
-        <p id="statusText">點擊輸入框即可自動貼上並嘗試開啟。</p>
+        <h1>新分頁開啟功能展示</h1>
+        <p id="originalPageMessage">這個頁面會一直停留在此，內容不會改變。</p>
+        
+        <input type="text" id="urlToOpen" value="https://www.google.com">
+        <br>
+        <button id="openLinkButton">用「新分頁」開啟上方網址</button>
+        
+        <div id="statusMessage" style="margin-top: 20px; color: #333;"></div>
     </div>
 
     <script>
-        const urlInput = document.getElementById('urlInput');
-        const statusTextEl = document.getElementById('statusText');
-        let currentAppType = ''; // 用於判斷轉換目標的狀態
-        let debounceTimer;
-        let isProgrammaticChange = false; // 防止腳本修改輸入框時觸發input事件的旗標
+        const urlInputElement = document.getElementById('urlToOpen');
+        const openButtonElement = document.getElementById('openLinkButton');
+        const originalPageMessageElement = document.getElementById('originalPageMessage');
+        const statusMessageElement = document.getElementById('statusMessage');
 
-        function getUsernameAndType(url) {
-            if (!url || typeof url !== 'string') return null;
-            url = url.trim();
+        openButtonElement.addEventListener('click', function() {
+            const url = urlInputElement.value.trim();
 
-            // 脆 (Threads): threads.net/@username or threads.com/@username
-            let threadsMatch = url.match(/threads\.(?:net|com)\/@([a-zA-Z0-9._]+)/);
-            if (threadsMatch && threadsMatch[1]) {
-                return { type: 'threads', username: threadsMatch[1] };
-            }
-
-            // Instagram: instagram.com/username
-            let igPathMatch = url.match(/instagram\.com\/([^/?#]+)/);
-            if (igPathMatch && igPathMatch[1]) {
-                const usernameCandidate = igPathMatch[1];
-                const reservedIgPaths = [
-                    'p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct', 
-                    'guides', 'tv', 'igtv', 'tagged', 'saved', 'settings', 'legal', 
-                    'about', 'press', 'api', 'help', 'login', 'logout', 'challenge', 
-                    'download', 'search', 'directory'
-                ];
-                if (!reservedIgPaths.includes(usernameCandidate.toLowerCase())) {
-                    return { type: 'instagram', username: usernameCandidate };
-                }
-            }
-            return null;
-        }
-
-        function generateConvertedHttpsUrl(originalUrl, userInfo) {
-            if (!userInfo) { // 如果沒有傳入userInfo，則嘗試從URL獲取
-                userInfo = getUsernameAndType(originalUrl);
-            }
-            if (userInfo && userInfo.username) {
-                currentAppType = userInfo.type; // 設定當前處理的App類型
-                if (userInfo.type === 'instagram') {
-                    return `https://www.threads.net/@${userInfo.username}`;
-                } else if (userInfo.type === 'threads') {
-                    return `https://www.instagram.com/${userInfo.username}/`;
-                }
-            }
-            currentAppType = ''; // 如果無法轉換，重置App類型
-            return null;
-        }
-
-        function updateStatus(message, type = 'info') {
-            statusTextEl.textContent = message;
-            statusTextEl.className = 'status-' + type;
-        }
-
-        async function processAndOpenUrl(urlToProcess) {
-            if (!urlToProcess || !urlToProcess.trim()) {
-                updateStatus('輸入框為空。請點擊以貼上網址。', 'info');
+            if (url === "") {
+                statusMessageElement.textContent = "錯誤：請先輸入一個網址。";
+                statusMessageElement.style.color = "red";
                 return;
             }
 
-            updateStatus('正在處理網址...', 'info');
-            const userInfo = getUsernameAndType(urlToProcess);
+            // 這是打開新分頁的核心指令
+            const newTab = window.open(url, '_blank');
 
-            if (userInfo && userInfo.username) {
-                const convertedUrl = generateConvertedHttpsUrl(urlToProcess, userInfo);
-                // currentAppType 會在 generateConvertedHttpsUrl 中被設定
-                const targetPlatformUiName = currentAppType === 'instagram' ? '脆 (Threads)' : 'Instagram';
-
-                if (convertedUrl) {
-                    updateStatus(`識別為 @${userInfo.username}。正在 ${targetPlatformUiName} 中開啟...`, 'success');
-                    
-                    const openedWindow = window.open(convertedUrl, '_blank'); // 在新分頁中開啟
-                    
-                    if (!openedWindow || openedWindow.closed || (typeof openedWindow.closed !== 'undefined' && openedWindow.closed)) {
-                        // 彈窗被阻擋的處理
-                        setTimeout(() => {
-                            isProgrammaticChange = true; // 設定旗標，表示接下來的value變更是腳本操作
-                            urlInput.value = convertedUrl;
-                            urlInput.select(); // 選取轉換後的網址，方便使用者複製
-                            updateStatus(`無法自動開啟。${targetPlatformUiName} 的網址已填入上方，請手動複製並開啟。`, 'error');
-                            setTimeout(() => { isProgrammaticChange = false; }, 0); // 在下一個事件迴圈中重置旗標
-                        }, 1200);
-                    } else {
-                        // 成功開啟
-                        setTimeout(() => {
-                            updateStatus(`已嘗試開啟 @${userInfo.username}。您可以點擊輸入框處理新的網址。`, 'info');
-                        }, 2000);
-                    }
-                } else {
-                    updateStatus('無法轉換此網址。請確認格式是否正確。', 'error');
-                }
+            // 檢查新分頁是否成功開啟 (例如：是否被彈窗阻擋器擋住)
+            if (newTab) {
+                statusMessageElement.textContent = "成功：已嘗試在新分頁開啟網址。這個原始頁面「沒有」改變。";
+                statusMessageElement.style.color = "green";
+                console.log('新分頁嘗試開啟：', url, '此訊息來自原始頁面。');
             } else {
-                updateStatus('網址格式無效。請貼上 Instagram 或 脆 (Threads) 個人檔案網址。', 'error');
+                statusMessageElement.textContent = "失敗：無法開啟新分頁。請檢查瀏覽器的彈窗阻擋設定。這個原始頁面「沒有」改變。";
+                statusMessageElement.style.color = "red";
+                console.error('開啟新分頁失敗，可能被阻擋。此訊息來自原始頁面。');
             }
-        }
 
-        async function handleInputInteraction() {
-            updateStatus('正在嘗試從剪貼簿貼上...', 'info');
-            try {
-                if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
-                    updateStatus('瀏覽器不支援或未允許讀取剪貼簿。請手動貼上網址。', 'error');
-                    urlInput.focus(); // 確保輸入框獲得焦點以便手動輸入
-                    return;
-                }
-
-                const text = await navigator.clipboard.readText();
-                if (text && text.trim() !== '') {
-                    isProgrammaticChange = true; // 設定旗標
-                    urlInput.value = text.trim();
-                    updateStatus('已從剪貼簿貼上。正在處理...', 'info');
-                    setTimeout(() => { isProgrammaticChange = false; }, 0); // 重置旗標
-                    
-                    await processAndOpenUrl(text.trim());
-                } else {
-                    updateStatus('剪貼簿為空。請複製網址後再試，或手動輸入。', 'info');
-                }
-            } catch (err) {
-                console.error('剪貼簿讀取失敗:', err);
-                let errorMsg = '讀取剪貼簿失敗。';
-                if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
-                    errorMsg = '讀取剪貼簿權限被拒。請允許權限或手動貼上。';
-                } else if (err.message && err.message.includes('clipboard is not focused')) {
-                     errorMsg = '請再次點擊頁面或輸入框以啟用剪貼簿。';
-                }
-                updateStatus(errorMsg, 'error');
-            }
-        }
-
-        // 當輸入框獲得焦點時，觸發貼上和處理邏輯
-        urlInput.addEventListener('focus', handleInputInteraction);
-        
-        // 當點擊已獲得焦點的輸入框時，也觸發（允許使用者透過再次點擊來重新貼上/處理）
-        urlInput.addEventListener('click', () => {
-            if (document.activeElement === urlInput) {
-                handleInputInteraction();
-            }
-            // 如果點擊導致輸入框首次獲得焦點， 'focus' 事件會處理 handleInputInteraction
-        });
-
-        // 當使用者手動在輸入框中輸入內容時
-        urlInput.addEventListener('input', () => {
-            if (isProgrammaticChange) {
-                return; // 如果是腳本造成的變更，則忽略，避免迴圈
-            }
-            clearTimeout(debounceTimer); // 清除之前的計時器
-            const currentUrl = urlInput.value;
-            if (!currentUrl.trim()) { // 如果輸入框被清空
-                updateStatus('請點擊輸入框以貼上，或手動輸入網址。', 'info');
-                return;
-            }
-            // 設定一個延遲，在使用者停止輸入後再處理
-            debounceTimer = setTimeout(() => {
-                processAndOpenUrl(currentUrl.trim());
-            }, 750); // 750毫秒的延遲
+            // 為了證明原始頁面還在且可互動，我們可以改變一點文字
+            originalPageMessageElement.textContent = "這個頁面仍然在此，剛剛執行了「開啟新分頁」的動作。";
         });
     </script>
 </body>
