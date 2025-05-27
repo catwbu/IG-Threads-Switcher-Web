@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速轉址工具</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* 左右分割背景 */
+            background: linear-gradient(to right, #ffffff 50%, #1c1c1c 50%);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #urlInput {
+            width: 300px; /* 輸入框寬度 */
+            padding: 15px 20px;
+            font-size: 16px;
+            color: #333; /* 輸入文字顏色 */
+            background-color: #f0f0f0; /* 淺灰色背景 */
+            border: 2px solid #555555; /* 灰色邊框 */
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s, transform 0.1s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        #urlInput:hover {
+            border-color: #000000; /* 滑鼠懸停時邊框變黑 */
+            background-color: #e9e9e9;
+        }
+
+        #urlInput:active {
+            transform: scale(0.98);
+        }
+
+        #urlInput:focus {
+            outline: none;
+            border-color: #333; /* 焦點時的邊框顏色 */
+        }
+
+        /* 用於提示訊息，預設隱藏 */
+        .status-message {
+            margin-top: 15px;
+            font-size: 14px;
+            height: 20px; /* 佔據固定高度，避免跳動 */
+            /* 根據背景色決定文字顏色 */
+        }
+        /* 根據滑鼠位置動態決定提示文字顏色 */
+        body[data-cursor-side="left"] .status-message {
+            color: #1c1c1c; /* 在白色背景上顯示深色文字 */
+        }
+        body[data-cursor-side="right"] .status-message {
+            color: #ffffff; /* 在黑色背景上顯示淺色文字 */
+        }
+        body[data-cursor-side="center"] .status-message {
+            color: #555555; /* 若在中間，使用中性色 */
+        }
+
+
+    </style>
+</head>
+<body data-cursor-side="center"> <div class="container">
+        <input type="text" id="urlInput" placeholder="點我貼上並轉址" readonly>
+        <div class="status-message" id="statusMessage"></div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const statusMessage = document.getElementById('statusMessage');
+        const bodyElement = document.body;
+
+        // 更新提示文字顏色
+        document.addEventListener('mousemove', (event) => {
+            const halfScreenWidth = window.innerWidth / 2;
+            if (event.clientX < halfScreenWidth - 50) { // 左側
+                bodyElement.setAttribute('data-cursor-side', 'left');
+            } else if (event.clientX > halfScreenWidth + 50) { // 右側
+                bodyElement.setAttribute('data-cursor-side', 'right');
+            } else { // 中間
+                bodyElement.setAttribute('data-cursor-side', 'center');
+            }
+        });
+
+
+        urlInput.addEventListener('click', async () => {
+            try {
+                // 1. 嘗試讀取剪貼簿內容
+                const textFromClipboard = await navigator.clipboard.readText();
+                urlInput.value = textFromClipboard; // 將內容填入輸入框 (使用者可以看到)
+                statusMessage.textContent = '已貼上內容...';
+
+                if (!textFromClipboard.trim()) {
+                    updateStatus('剪貼簿為空或無效內容。', true);
+                    return;
+                }
+
+                // 2. 驗證是否為可能的網址 (基本檢查)
+                let urlToConvert;
+                try {
+                    // 確保URL構造函數能解析，並且至少有 http/https 協議
+                    if (!textFromClipboard.match(/^https?:\/\/.+/i) && !textFromClipboard.match(/^http?:\/\/.+/i)) {
+                         // 如果沒有協議，嘗試添加 https://
+                        urlToConvert = 'https://' + textFromClipboard;
+                    } else {
+                        urlToConvert = textFromClipboard;
+                    }
+                    new URL(urlToConvert); // 嘗試解析以驗證基本結構
+                } catch (e) {
+                    updateStatus('剪貼簿內容非有效網址格式。', true);
+                    return;
+                }
+
+                // 3. 網址轉換邏輯 (您可以自訂這部分)
+                // 範例轉換：在網域後加上特定路徑或參數
+                let convertedUrl = '';
+                const originalUrl = new URL(urlToConvert);
+
+                // --- 在此定義您的轉換規則 ---
+                // 範例1: 如果是 example.com 的網址，則替換路徑
+                if (originalUrl.hostname.includes('example.com')) {
+                    convertedUrl = originalUrl.protocol + '//' + originalUrl.hostname + '/converted-path' + originalUrl.search + originalUrl.hash;
+                }
+                // 範例2: 給所有網址加上一個查詢參數
+                else {
+                    originalUrl.searchParams.append('utm_source', 'quicktool');
+                    convertedUrl = originalUrl.toString();
+                }
+                // --- 轉換規則結束 ---
+
+                if (!convertedUrl) {
+                    updateStatus('無法應用轉換規則。', true);
+                    return;
+                }
+
+                updateStatus(`轉換成功，正在前往: ${convertedUrl.substring(0,50)}...`, false);
+
+                // 4. 在新分頁打開轉換後的網址
+                setTimeout(() => { // 短暫延遲讓使用者看到訊息
+                    window.open(convertedUrl, '_blank');
+                    // 重設輸入框
+                    urlInput.value = '';
+                    urlInput.placeholder = '點我再次貼上並轉址';
+                    statusMessage.textContent = '已在新分頁中打開。';
+                }, 1500);
+
+
+            } catch (err) {
+                console.error('操作失敗:', err);
+                let message = '操作失敗。';
+                if (err.name === 'NotAllowedError') {
+                    message = '需要剪貼簿讀取權限。';
+                } else if (err.message.includes('clipboard is empty')) {
+                    message = '剪貼簿為空。';
+                }
+                updateStatus(message, true);
+            }
+        });
+
+        function updateStatus(message, isError) {
+            statusMessage.textContent = message;
+            if (isError) {
+                statusMessage.style.color = '#ff6666'; // 錯誤訊息用紅色
+                // 短暫改變輸入框樣式提示錯誤
+                urlInput.style.borderColor = '#ff6666';
+                setTimeout(() => {
+                   // 根據滑鼠位置決定顏色
+                    const currentSide = bodyElement.getAttribute('data-cursor-side');
+                    if (currentSide === 'left') statusMessage.style.color = '#1c1c1c';
+                    else if (currentSide === 'right') statusMessage.style.color = '#ffffff';
+                    else statusMessage.style.color = '#555555';
+                    urlInput.style.borderColor = '#555555'; // 恢復邊框顏色
+                }, 3000);
+            } else {
+                // 成功訊息顏色根據背景決定
+                const currentSide = bodyElement.getAttribute('data-cursor-side');
+                if (currentSide === 'left') statusMessage.style.color = '#1c1c1c';
+                else if (currentSide === 'right') statusMessage.style.color = '#ffffff';
+                else statusMessage.style.color = '#555555';
+            }
+        }
+
+        // 讓輸入框在頁面載入時視覺上更明顯
+        urlInput.focus();
+        setTimeout(() => urlInput.blur(), 100); // 短暫focus後blur，避免鍵盤彈出
+
+    </script>
+</body>
+</html>
