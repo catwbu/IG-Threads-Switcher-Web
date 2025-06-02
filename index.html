@@ -1,174 +1,440 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IG/脆 快速開啟</title>
-    <link rel="icon" href="icon2.png" type="image/png"> <link rel="apple-touch-icon" href="icon2.png"> <style>
-        body {
-            background-color: #121212;
-            color: #e0e0e0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .container {
-            background-color: #1e1e1e;
-            padding: 35px 30px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-            width: 100%;
-            max-width: 420px;
-            text-align: center;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IG/Threads 網址轉換器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        /* 新增的圖示樣式 */
-        #pageMainIcon {
-            display: block;
-            margin: 0 auto 30px auto; /* 水平居中，下方留出間距 */
-            width: 70px;  /* 預設寬度，請根據您的 icon2.png 實際情況調整 */
-            height: 70px; /* 預設高度，如果圖示非正方形，可將其中一個設為 auto */
-            /* border-radius: 12px; */ /* 可選：為圖示加上圓角 */
-            /* box-shadow: 0 3px 8px rgba(0,0,0,0.2); */ /* 可選：為圖示加上細微陰影 */
-        }
+    body {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
 
-        #urlInput {
-            width: 100%;
-            padding: 18px 20px;
-            border-radius: 10px;
-            border: 1px solid #4A4A4A;
-            background-color: #2D2D2D;
-            color: #E0E0E0;
-            font-size: 17px;
-            font-weight: 500;
-            box-sizing: border-box;
-            text-align: center;
-            cursor: pointer;
-            transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
-            outline: none;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            -webkit-tap-highlight-color: transparent;
-        }
-        #urlInput::placeholder {
-            color: #B0B0B0;
-            opacity: 1;
-            font-weight: 500;
-        }
-        #urlInput:hover {
-            background-color: #353535;
-            border-color: #666666;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-        #urlInput:active {
-            background-color: #3A3A3A;
-            transform: scale(0.97);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        #urlInput[readonly] {
-            user-select: none;
-        }
-    </style>
+    .container {
+      background-color: #121212;
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 350px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      border: 1px solid #333;
+      position: relative;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: bold;
+      color: #f0f0f0;
+      margin-bottom: 20px;
+    }
+
+    #settingsIcon {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #e0e0e0;
+      font-size: 18px;
+      padding: 8px;
+      border-radius: 8px;
+      transition: background-color 0.2s;
+    }
+
+    #settingsIcon:hover {
+      background-color: #333;
+    }
+
+    .user-info {
+      margin-bottom: 25px;
+    }
+
+    #usernameDisplay {
+      font-size: 18px;
+      font-weight: bold;
+      color: #f0f0f0;
+      word-break: break-all;
+      margin-bottom: 15px;
+    }
+
+    #avatarPlaceholder {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: #4a4a4a;
+      border: 2px solid #666;
+      display: none;
+      background-image: url('profile.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      margin: 0 auto;
+    }
+
+    #urlInput {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background-color: #1e1e1e;
+      color: #fff;
+      font-size: 14px;
+      transition: border-color 0.2s;
+      margin-bottom: 15px;
+      cursor: pointer; /* Indicate it's clickable */
+    }
+
+    #urlInput:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+
+    #urlInput::placeholder {
+      color: #666;
+    }
+
+    #goButton {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      background-color: #f2f1ef;
+      color: #121212;
+      font-size: 16px;
+      font-weight: bold;
+      border: 1px solid #cccccc;
+      border-radius: 8px;
+      display: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #goButton:hover {
+      background-color: #e0e0e0;
+      transform: translateY(-1px);
+    }
+
+    #statusText {
+      color: #ff5252; /* Default error/status color, can be changed by specific messages */
+      display: block;
+      text-align: center;
+      font-size: 14px;
+      min-height: 1.2em; /* Ensure space for text */
+    }
+
+    #settingsPage {
+      display: none;
+      margin-top: 20px;
+      border-top: 1px solid #444;
+      padding-top: 20px;
+    }
+
+    .settings-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #f0f0f0;
+      margin-bottom: 15px;
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 20px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #444;
+      border-radius: 20px;
+      transition: 0.2s;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: #e0e0e0;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+
+    .toggle-switch input:checked + .slider {
+      background-color: #4CAF50;
+    }
+
+    .toggle-switch input:checked + .slider:before {
+      background-color: #fff;
+      transform: translateX(20px);
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        margin: 10px;
+        padding: 20px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <img src="icon2.png" alt="頁面圖示" id="pageMainIcon">
-        
-        <input type="text" id="urlInput" placeholder="🔗 點擊貼上並開啟 IG/脆" readonly>
+  <div class="container">
+    <button id="settingsIcon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.646.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 0 1 0 1.255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.333.184-.582.496-.646.87l-.212 1.282c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.282c-.062-.374-.312-.686-.645-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.759 6.759 0 0 1 0-1.255c.007-.378-.137-.75-.43-.99l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.184.582-.496.645-.87l.212-1.281Z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+      </svg>
+    </button>
+
+    <div class="header">
+      <h1>IG/Threads 轉換器</h1>
     </div>
 
-    <script>
-        // JavaScript 功能與上一版「靜默操作」完全相同
-        const urlInput = document.getElementById('urlInput');
+    <div class="user-info">
+      <h3 id="usernameDisplay">點擊文本框從剪貼簿獲取</h3>
+      <div id="avatarPlaceholder"></div>
+    </div>
 
-        function getUsernameAndType(url) {
-            if (!url || typeof url !== 'string') return null;
-            url = url.trim();
+    <input type="text" id="urlInput" placeholder="點擊此處從剪貼簿獲取網址" readonly>
+    
+    <button id="goButton">轉換網址</button>
+    <div id="statusText">支援 Instagram & Threads</div>
 
-            let threadsMatch = url.match(/threads\.(?:net|com)\/@([a-zA-Z0-9._]+)/);
-            if (threadsMatch && threadsMatch[1]) {
-                return { type: 'threads', username: threadsMatch[1] };
-            }
+    <div id="settingsPage">
+      <h4 class="settings-title">設定</h4>
+      <div class="toggle-container">
+        <span>在新分頁開啟</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="openInNewTab" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
 
-            let igPathMatch = url.match(/instagram\.com\/([^/?#]+)/);
-            if (igPathMatch && igPathMatch[1]) {
-                const usernameCandidate = igPathMatch[1];
-                const reservedIgPaths = [
-                    'p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct', 
-                    'guides', 'tv', 'igtv', 'tagged', 'saved', 'settings', 'legal', 
-                    'about', 'press', 'api', 'help', 'login', 'logout', 'challenge', 
-                    'download', 'search', 'directory'
-                ];
-                if (!reservedIgPaths.includes(usernameCandidate.toLowerCase())) {
-                    return { type: 'instagram', username: usernameCandidate };
-                }
-            }
-            return null;
+  <script>
+    const inputEl = document.getElementById("urlInput");
+    const goButton = document.getElementById("goButton");
+    const statusText = document.getElementById("statusText");
+    const settingsIcon = document.getElementById("settingsIcon");
+    const settingsPage = document.getElementById("settingsPage");
+    const openInNewTabCheckbox = document.getElementById("openInNewTab");
+    const usernameDisplayEl = document.getElementById("usernameDisplay");
+    const avatarPlaceholderEl = document.getElementById("avatarPlaceholder");
+
+    let convertedUrl = "";
+    let openInNewTab = true;
+
+    async function getClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) { // Clipboard has text
+          inputEl.value = text;
+          convertAndDisplay(text);
+        } else { // Clipboard is empty
+          // If input is currently empty (no URL param, or it was also empty), show default prompt.
+          if (!inputEl.value) {
+            convertAndDisplay(""); 
+          } else {
+            // Input has value (e.g. from URL param that ran before click).
+            // Clicking input with empty clipboard should re-process existing content.
+            convertAndDisplay(inputEl.value);
+          }
         }
-
-        function generateConvertedHttpsUrl(originalUrl, userInfo) {
-            if (!userInfo) {
-                userInfo = getUsernameAndType(originalUrl); 
-            }
-            if (userInfo && userInfo.username) {
-                if (userInfo.type === 'instagram') {
-                    return `https://www.threads.net/@${userInfo.username}`;
-                } else if (userInfo.type === 'threads') {
-                    return `https://www.instagram.com/${userInfo.username}/`;
-                }
-            }
-            return null;
-        }
-
-        async function handleClickToProcessAndOpen() {
-            console.log("Input clicked. Attempting to process clipboard...");
-
-            try {
-                if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
-                    console.warn('Clipboard API not available or permission denied.');
-                    return; 
-                }
-
-                const text = await navigator.clipboard.readText();
-                if (!text || !text.trim()) {
-                    console.info('Clipboard is empty or contains only whitespace.');
-                    return; 
-                }
-
-                const trimmedText = text.trim();
-                const userInfo = getUsernameAndType(trimmedText);
-
-                if (userInfo && userInfo.username) {
-                    const convertedUrl = generateConvertedHttpsUrl(trimmedText, userInfo);
-                    if (convertedUrl) {
-                        console.log(`Attempting to open converted URL: ${convertedUrl}`);
-                        const openedWindow = window.open(convertedUrl, '_blank');
-                        if (!openedWindow || openedWindow.closed || (typeof openedWindow.closed !== 'undefined' && openedWindow.closed)) {
-                            console.warn('Popup blocked when trying to open:', convertedUrl);
-                        } else {
-                            console.info('Successfully attempted to open new tab for:', convertedUrl);
-                        }
-                    } else {
-                        console.warn('Could not convert URL from clipboard:', trimmedText);
-                    }
-                } else {
-                    console.info('Invalid or unsupported URL from clipboard:', trimmedText);
-                }
-            } catch (err) {
-                console.error('Error during clipboard processing or opening link:', err);
+      } catch (err) { // Failed to read clipboard.
+        console.warn("無法讀取剪貼簿:", err.name, err.message);
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        // If input is currently empty and no URL param is pending to fill it, show a clear error state.
+        if (!inputEl.value && !currentUrlParams.get('url')) {
+          usernameDisplayEl.textContent = "剪貼簿獲取失敗";
+          inputEl.value = ""; 
+          inputEl.placeholder = "無法從剪貼簿獲取";
+          statusText.textContent = "請檢查瀏覽器剪貼簿權限";
+          statusText.style.color = "#ff5252"; // Ensure error color
+          statusText.style.display = "block";
+          goButton.style.display = "none";
+          avatarPlaceholderEl.style.display = "none";
+        } else if (inputEl.value) {
+          // Input has a value (e.g. from URL param). Clipboard failed on click.
+          // Re-process the current input value.
+          convertAndDisplay(inputEl.value);
+           // Optionally, provide a non-intrusive notification about clipboard failure
+           if (statusText.textContent === "支援 Instagram & Threads" || statusText.style.display === "none" || statusText.textContent === "點擊輸入框從剪貼簿獲取網址") {
+                statusText.textContent = "剪貼簿讀取失敗，處理現有網址";
+                statusText.style.color = "#ffcc00"; // Warning color
+                statusText.style.display = "block";
             }
         }
+        // If inputEl.value is empty, but a URL param IS present,
+        // DOMContentLoaded will handle loading from URL param. No special message here, as the URL param will take over.
+      }
+    }
 
-        urlInput.addEventListener('click', handleClickToProcessAndOpen);
+    function getUsername(url) {
+      let username = null;
+      let igMatch = url.match(/instagram\.com\/([a-zA-Z0-9._]+)(?:\/|$)/);
+      if (igMatch && igMatch[1] && igMatch[1] !== 'p' && igMatch[1] !== 'reels' && igMatch[1] !== 'reel') {
+        username = igMatch[1];
+        return { type: 'instagram', username: username };
+      }
 
-        urlInput.addEventListener('keydown', (e) => {
-            e.preventDefault();
-        });
-    </script>
+      let threadsMatch = url.match(/threads\.(?:net|com)\/@([a-zA-Z0-9._]+)(?:\/|$)/);
+      if (threadsMatch && threadsMatch[1]) {
+        username = threadsMatch[1];
+        return { type: 'threads', username: username };
+      }
+      return null;
+    }
+
+    function convertAndDisplay(url) {
+      convertedUrl = "";
+      avatarPlaceholderEl.style.display = "none"; // Reset avatar
+      statusText.style.color = "#ff5252"; // Default to error/status color, successful conversion can change it or hide statusText
+
+      if (!url || url.trim() === "") {
+        usernameDisplayEl.textContent = "點擊輸入框從剪貼簿獲取網址";
+        inputEl.value = ""; // Ensure input field is also clear
+        goButton.style.display = "none";
+        statusText.textContent = "支援 Instagram & Threads";
+        statusText.style.color = "#666"; // Neutral color for default message
+        statusText.style.display = "block";
+        avatarPlaceholderEl.style.display = "none";
+        return;
+      }
+
+      const userInfo = getUsername(url.trim());
+
+      if (userInfo && userInfo.username) {
+        usernameDisplayEl.textContent = `@${userInfo.username}`;
+        avatarPlaceholderEl.style.display = "block"; // Show avatar placeholder
+
+        if (userInfo.type === 'instagram') {
+          convertedUrl = `https://www.threads.net/@${userInfo.username}`;
+        } else if (userInfo.type === 'threads') {
+          convertedUrl = `https://www.instagram.com/${userInfo.username}/`;
+        }
+      } else {
+        usernameDisplayEl.textContent = "找不到用戶";
+        avatarPlaceholderEl.style.display = "none";
+      }
+
+      if (convertedUrl) {
+        goButton.textContent = `開啟 ${userInfo.type === 'instagram' ? 'Threads' : 'Instagram'}`;
+        goButton.style.display = "block";
+        statusText.style.display = "none"; // Hide status on success
+      } else {
+        goButton.style.display = "none";
+        statusText.style.display = "block";
+        statusText.textContent = "不支援此網址或找不到用戶"; // More comprehensive message
+         if (!userInfo || !userInfo.username) { // This implies getUsername returned null
+          usernameDisplayEl.textContent = "找不到用戶"; // Ensure this is set if URL was invalid from start
+          avatarPlaceholderEl.style.display = "none";
+        }
+      }
+    }
+
+    function saveSettings() {
+      localStorage.setItem('openInNewTab', openInNewTab);
+    }
+
+    function loadSettings() {
+      const saved = localStorage.getItem('openInNewTab');
+      if (saved !== null) {
+        openInNewTab = saved === 'true';
+        openInNewTabCheckbox.checked = openInNewTab;
+      }
+    }
+
+    // Event Listeners
+    inputEl.addEventListener("click", getClipboard); // Main interaction for input
+
+    goButton.addEventListener("click", () => {
+      if (!convertedUrl) return;
+
+      if (openInNewTab) {
+        window.open(convertedUrl, '_blank');
+      } else {
+        window.location.href = convertedUrl;
+      }
+    });
+
+    settingsIcon.addEventListener("click", () => {
+      const isHidden = window.getComputedStyle(settingsPage).display === "none";
+      settingsPage.style.display = isHidden ? "block" : "none";
+    });
+
+    openInNewTabCheckbox.addEventListener("change", () => {
+      openInNewTab = openInNewTabCheckbox.checked;
+      saveSettings();
+    });
+
+    // Initialization
+    document.addEventListener("DOMContentLoaded", () => {
+      loadSettings();
+      
+      // Attempt to get from clipboard on load.
+      // Note: Clipboard API might require user interaction or specific browser focus.
+      getClipboard(); 
+      
+      // Check URL parameters, which take precedence if present.
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlParam = urlParams.get('url');
+      if (urlParam) {
+        const decodedUrlParam = decodeURIComponent(urlParam);
+        inputEl.value = decodedUrlParam; // Set input from URL param
+        convertAndDisplay(decodedUrlParam); // Process it
+      } else if (!inputEl.value) {
+        // If no URL param and input is still empty (e.g., clipboard was empty or initial getClipboard failed silently)
+        // ensure the initial prompt state is correctly set.
+        // getClipboard should ideally handle setting an initial state or error.
+        // This is a fallback.
+        // convertAndDisplay(""); // This is now more robustly handled by getClipboard
+      }
+    });
+
+    // Support keyboard shortcuts
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && convertedUrl && goButton.style.display !== "none") {
+        goButton.click();
+      }
+      if (e.key === "Escape") {
+        if (window.getComputedStyle(settingsPage).display !== "none") {
+             settingsPage.style.display = "none";
+        }
+      }
+    });
+  </script>
 </body>
 </html>
