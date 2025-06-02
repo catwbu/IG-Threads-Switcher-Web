@@ -304,13 +304,15 @@
 
     function getUsername(url) {
       let username = null;
-      let igMatch = url.match(/instagram\.com\/([a-zA-Z0-9._]+)(?:\/|$)/);
+      // Updated regex for Instagram to handle query parameters after username
+      let igMatch = url.match(/instagram\.com\/([a-zA-Z0-9._]+)(?:\/|\?|$)/);
       if (igMatch && igMatch[1] && igMatch[1] !== 'p' && igMatch[1] !== 'reels' && igMatch[1] !== 'reel') {
         username = igMatch[1];
         return { type: 'instagram', username: username };
       }
 
-      let threadsMatch = url.match(/threads\.(?:net|com)\/@([a-zA-Z0-9._]+)(?:\/|$)/);
+      // Updated regex for Threads to handle query parameters after username
+      let threadsMatch = url.match(/threads\.(?:net|com)\/@([a-zA-Z0-9._]+)(?:\/|\?|$)/);
       if (threadsMatch && threadsMatch[1]) {
         username = threadsMatch[1];
         return { type: 'threads', username: username };
